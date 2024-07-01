@@ -61,13 +61,6 @@ export default function (opts = {}) {
 
 			const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
-			await bundle.write({
-				dir: `${out}/server`,
-				format: 'esm',
-				sourcemap: true,
-				chunkFileNames: 'chunks/[name]-[hash].js',
-			});
-
 			builder.copy(files, out, {
 				replace: {
 					SERVER: './server/index.js',
@@ -97,7 +90,7 @@ export default function (opts = {}) {
 				scripts: {
 					start: 'bun ./index.js',
 				},
-				dependencies: {},
+				dependencies: {cookie: "latest", devalue: "latest", "set-cookie-parser": "latest"},
 			};
 
 			try {
