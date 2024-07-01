@@ -2,7 +2,7 @@
 
 [Adapter](https://kit.svelte.dev/docs/adapters) for SvelteKit apps that generates a standalone [Bun](https://github.com/oven-sh/bun) server.
 
-## :zap: Usage
+## Usage
 
 Install with `bun add -d @jonasbuerger/svelte-adapter-bun`, then add the adapter to your `svelte.config.js`:
 
@@ -27,7 +27,7 @@ cd build/
 bun run start
 ```
 
-## :gear: Options
+## Options
 
 The adapter can be configured with various options:
 
@@ -48,7 +48,7 @@ export default {
         files: ["htm", "html"],
       },
       dynamic_origin: true,
-      xff_depth: 1,
+      xff_depth: 0,
     }),
   },
 };
@@ -105,7 +105,7 @@ If enabled use `PROTOCOL_HEADER` `HOST_HEADER` like origin. Default: `false`
 
 ### xff_depth
 
-The default value of XFF_DEPTH if environment is not set. Default: `1`
+The default value of XFF_DEPTH if environment is not set. Default: `0`
 
 ## :spider_web: WebSocket Server
 

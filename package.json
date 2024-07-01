@@ -19,7 +19,7 @@
   "scripts": {
     "build": "rm -fr files && bun run build.js",
     "lint": "prettier --check .",
-    "format": "prettier --write .",
+    "format": "prettier --write . --ignore-path ./.prettierignore",
     "prepublish": "bun run build"
   },
   "repository": {

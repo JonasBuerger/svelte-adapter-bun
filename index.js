@@ -24,7 +24,7 @@ export default function (opts = {}) {
     envPrefix = "",
     development = false,
     dynamic_origin = false,
-    xff_depth = 1,
+    xff_depth = 0,
     assets = true,
   } = opts;
   return {
@@ -140,7 +140,7 @@ async function compress(directory, options) {
  */
 async function compress_file(file, format = "gz") {
   const compress =
-    format == "br"
+    format === "br"
       ? zlib.createBrotliCompress({
           params: {
             [zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT,

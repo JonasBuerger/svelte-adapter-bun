@@ -15,7 +15,7 @@ installPolyfills();
 const server = new Server(manifest);
 await server.init({ env: (Bun || process).env });
 
-const xff_depth = parseInt(env("XFF_DEPTH", build_options.xff_depth ?? 1));
+const xff_depth = parseInt(env("XFF_DEPTH", build_options.xff_depth ?? 0));
 const origin = env("ORIGIN", undefined);
 
 const address_header = env("ADDRESS_HEADER", "").toLowerCase();
@@ -116,7 +116,7 @@ function ssr(req) {
         if (address_header === "x-forwarded-for") {
           const addresses = value.split(",");
 
-          if (xff_depth < 1) {
+          if (xff_depth < 0) {
             throw new Error(`${ENV_PREFIX + "XFF_DEPTH"} must be a positive integer`);
           }
 
