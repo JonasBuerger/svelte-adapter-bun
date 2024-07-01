@@ -1,6 +1,6 @@
 {
 	"name": "@jonasbuerger/svelte-adapter-bun",
-	"version": "0.5.7",
+	"version": "0.6.0",
 	"description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
 	"main": "index.js",
 	"types": "index.d.ts",
@@ -40,6 +40,10 @@
 	},
 	"homepage": "https://github.com/JonasBuerger/svelte-adapter-bun#readme",
 	"devDependencies": {
+		"@semantic-release/commit-analyzer": "^13.0.0",
+		"@semantic-release/github": "^10.0.7",
+		"@semantic-release/npm": "^12.0.1",
+		"@semantic-release/release-notes-generator": "^14.0.1",
 		"@sveltejs/kit": "^1.27.3",
 		"bun-types": "^1.0.9",
 		"mrmime": "^1.0.1",
