@@ -47,7 +47,7 @@ export default {
 				gzip: true,
 				files: ['htm', 'html'],
 			},
-			dynamic_origin: true,
+			transpileBun: false,
 			xff_depth: 0,
 		}),
 	},
@@ -56,7 +56,7 @@ export default {
 
 ### out
 
-The directory to build the server to. It defaults to `build` — i.e. `bun run start` would start the server locally after it has been created.
+The directory to build the server to. It defaults to `build` — i.e. `bun run build/index.js` would start the server locally after it has been created.
 
 ### assets
 
@@ -78,7 +78,7 @@ Enable gzip precompressing. It defaults to `false`.
 
 #### files
 
-file extensions to compress.It defaults to `['html','js','json','css','svg','xml','wasm']`.
+file extensions to compress. It defaults to `['html','js','json','css','svg','xml','wasm']`.
 
 ### envPrefix
 
@@ -98,10 +98,6 @@ bun build/index.js
 ### development
 
 This enables bun's error page. Default: `false`
-
-### dynamic_origin
-
-If enabled use `PROTOCOL_HEADER` `HOST_HEADER` like origin. Default: `false`
 
 ### xff_depth
 
@@ -130,22 +126,6 @@ export const handleWebsocket = {
 			return upgrade(request);
 		}
 	},
-};
-```
-
-## Polyfills
-
-If you need to use polyfills in your app, you can add them to the [`src/polyfills.js`](src/polyfills.js) file:
-
-```js
-class Polifill {
-  constructor() {
-    ...
-  }
-}
-
-const globals = {
-  Polifill,
 };
 ```
 

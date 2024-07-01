@@ -11,6 +11,10 @@ import glob from 'tiny-glob';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 import zlib from 'zlib';
+import { rollup } from 'rollup';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import json from '@rollup/plugin-json';
 
 const pipe = promisify(pipeline);
 
@@ -23,7 +27,6 @@ export default function (opts = {}) {
 		precompress = false,
 		envPrefix = '',
 		development = false,
-		dynamic_origin = false,
 		xff_depth = 0,
 		assets = true,
 		transpileBun = false,
@@ -61,13 +64,44 @@ export default function (opts = {}) {
 
 			const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
+			// we bundle the Vite output so that deployments only need
+			// their production dependencies. Anything in devDependencies
+			// will get included in the bundled code
+			const bundle = await rollup({
+				input: {
+					index: `${tmp}/index.js`,
+					manifest: `${tmp}/manifest.js`,
+				},
+				external: [
+					// dependencies could have deep exports, so we need a regex
+					...Object.keys(pkg.dependencies || {}).map(d => new RegExp(`^${d}(\\/.*)?$`)),
+				],
+				plugins: [
+					nodeResolve({
+						preferBuiltins: true,
+						exportConditions: ['node'],
+					}),
+					// @ts-ignore https://github.com/rollup/plugins/issues/1329
+					commonjs({ strictRequires: true }),
+					// @ts-ignore https://github.com/rollup/plugins/issues/1329
+					json(),
+				],
+			});
+
+			await bundle.write({
+				dir: `${out}/server`,
+				format: 'esm',
+				sourcemap: true,
+				chunkFileNames: 'chunks/[name]-[hash].js',
+			});
+
 			builder.copy(files, out, {
 				replace: {
 					SERVER: './server/index.js',
 					MANIFEST: './server/manifest.js',
 					ENV_PREFIX: JSON.stringify(envPrefix),
 					dotENV_PREFIX: envPrefix,
-					BUILD_OPTIONS: JSON.stringify({ development, dynamic_origin, xff_depth, assets }),
+					BUILD_OPTIONS: JSON.stringify({ development, dynamic_origin: false, xff_depth, assets }),
 				},
 			});
 
@@ -90,7 +124,7 @@ export default function (opts = {}) {
 				scripts: {
 					start: 'bun ./index.js',
 				},
-				dependencies: {cookie: "latest", devalue: "latest", "set-cookie-parser": "latest"},
+				dependencies: { cookie: 'latest', devalue: 'latest', 'set-cookie-parser': 'latest' },
 			};
 
 			try {
