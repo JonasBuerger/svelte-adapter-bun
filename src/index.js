@@ -3,7 +3,6 @@ import { serve } from 'bun';
 import { build_options, env } from './env.js';
 import handler from './handler.js';
 
-export default {};
 const hostname = env('HOST', '0.0.0.0');
 const port = parseInt(env('PORT', 3000));
 
