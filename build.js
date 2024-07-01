@@ -1,11 +1,11 @@
-import fs from 'fs/promises';
+import fs from "fs/promises";
 
-await fs.rm('./files', { recursive: true, force: true });
+await fs.rm("./files", { recursive: true, force: true });
 await Bun.build({
-	entrypoints: ['src/index.js', 'src/handler.js'],
-	outdir: './files',
-	splitting: true,
-	external: ['SERVER', 'MANIFEST'],
-	format: 'esm',
-	target: 'bun',
+  entrypoints: ["src/index.js", "src/handler.js"],
+  outdir: "./files",
+  splitting: true,
+  external: ["SERVER", "MANIFEST"],
+  format: "esm",
+  target: "bun",
 });

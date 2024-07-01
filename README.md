@@ -8,12 +8,12 @@ Install with `bun add -d @jonasbuerger/svelte-adapter-bun`, then add the adapter
 
 ```js
 // svelte.config.js
-import adapter from '@jonasbuerger/svelte-adapter-bun';
+import adapter from "@jonasbuerger/svelte-adapter-bun";
 
 export default {
-	kit: {
-		adapter: adapter(),
-	},
+  kit: {
+    adapter: adapter(),
+  },
 };
 ```
 
@@ -33,24 +33,24 @@ The adapter can be configured with various options:
 
 ```js
 // svelte.config.js
-import adapter from '@jonasbuerger/svelte-adapter-bun';
+import adapter from "@jonasbuerger/svelte-adapter-bun";
 export default {
-	kit: {
-		adapter: adapter({
-			out: 'build',
-			assets: true,
-			envPrefix: 'MY_CUSTOM_',
-			development: true,
-			// precompress: true,
-			precompress: {
-				brotli: true,
-				gzip: true,
-				files: ['htm', 'html'],
-			},
-			transpileBun: false,
-			xff_depth: 0,
-		}),
-	},
+  kit: {
+    adapter: adapter({
+      out: "build",
+      assets: true,
+      envPrefix: "MY_CUSTOM_",
+      development: true,
+      // precompress: true,
+      precompress: {
+        brotli: true,
+        gzip: true,
+        files: ["htm", "html"],
+      },
+      transpileBun: false,
+      xff_depth: 0,
+    }),
+  },
 };
 ```
 
@@ -85,7 +85,7 @@ file extensions to compress. It defaults to `['html','js','json','css','svg','xm
 If you need to change the name of the environment variables used to configure the deployment (for example, to deconflict with environment variables you don't control), you can specify a prefix:
 
 ```js
-envPrefix: 'MY_CUSTOM_';
+envPrefix: "MY_CUSTOM_";
 ```
 
 ```
@@ -112,20 +112,20 @@ https://bun.sh/docs/api/websockets
 
 /** @type {import("@jonasbuerger/svelte-adapter-bun").WebSocketHandler} */
 export const handleWebsocket = {
-	open(ws) {
-		console.log('WebSocket opened');
-		ws.send('Hello from Server');
-	},
-	/**
-	 * @param {Request} request
-	 * @param {Function} upgrade
-	 */
-	upgrade(request, upgrade) {
-		const url = new URL(request.url);
-		if (url.pathname.startsWith('/ws')) {
-			return upgrade(request);
-		}
-	},
+  open(ws) {
+    console.log("WebSocket opened");
+    ws.send("Hello from Server");
+  },
+  /**
+   * @param {Request} request
+   * @param {Function} upgrade
+   */
+  upgrade(request, upgrade) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/ws")) {
+      return upgrade(request);
+    }
+  },
 };
 ```
 
