@@ -1,52 +1,64 @@
 {
-  "name": "@catdadcode/svelte-adapter-bun",
-  "version": "0.5.7",
-  "description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
-  "main": "index.js",
-  "types": "index.d.ts",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "files": [
-    "files",
-    "index.d.ts"
-  ],
-  "scripts": {
-    "build": "rm -fr files && bun run build.js",
-    "lint": "prettier --check .",
-    "format": "prettier --write .",
-    "prepublish": "bun run build"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/catdadcode/svelte-adapter-bun.git"
-  },
-  "keywords": [
-    "svelte",
-    "sveltekit",
-    "sveltekit-adapter",
-    "bun"
-  ],
-  "author": "Alex Ford <@catdadcode>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/catdadcode/svelte-adapter-bun/issues"
-  },
-  "homepage": "https://github.com/catdadcode/svelte-adapter-bun#readme",
-  "devDependencies": {
-    "@sveltejs/kit": "^1.27.3",
-    "bun-types": "^1.0.9",
-    "mrmime": "^1.0.1",
-    "prettier": "^3.0.3",
-    "prettier-plugin-svelte": "^3.1.2",
-    "totalist": "^3.0.1"
-  },
-  "dependencies": {
-    "tiny-glob": "^0.2.9"
-  }
+	"name": "@jonasbuerger/svelte-adapter-bun",
+	"version": "0.6.0",
+	"description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
+	"main": "index.js",
+	"types": "index.d.ts",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"import": "./index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"files",
+		"index.d.ts"
+	],
+	"scripts": {
+		"build": "rm -fr files && bun run build.js",
+		"lint": "prettier --check .",
+		"format": "prettier --write . --ignore-path ./.prettierignore",
+		"prepublish": "bun run build",
+		"init": "bun install && git config diff.lockb.textconv bun && git config diff.lockb.binary true"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/JonasBuerger/svelte-adapter-bun.git"
+	},
+	"keywords": [
+		"svelte",
+		"sveltekit",
+		"sveltekit-adapter",
+		"bun"
+	],
+	"author": "Jonas Bürger <@jonasbuerger>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/JonasBuerger/svelte-adapter-bun/issues"
+	},
+	"homepage": "https://github.com/JonasBuerger/svelte-adapter-bun#readme",
+	"devDependencies": {
+		"@semantic-release/commit-analyzer": "^13.0.0",
+		"@semantic-release/github": "^10.0.7",
+		"@semantic-release/npm": "^12.0.1",
+		"@semantic-release/release-notes-generator": "^14.0.1",
+		"@sveltejs/kit": "^1.27.3",
+		"bun-types": "^1.0.9",
+		"mrmime": "^1.0.1",
+		"prettier": "^3.1.1",
+		"prettier-plugin-svelte": "^3.1.2",
+		"totalist": "^3.0.1"
+	},
+	"dependencies": {
+		"@rollup/plugin-commonjs": "^25.0.7",
+		"@rollup/plugin-json": "^6.1.0",
+		"@rollup/plugin-node-resolve": "^15.2.3",
+		"rollup": "^4.12.1",
+		"tiny-glob": "^0.2.9"
+	},
+	"engines": {
+		"bun": "^1.1.15"
+	}
 }
