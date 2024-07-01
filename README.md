@@ -8,12 +8,12 @@ Install with `bun add -d @jonasbuerger/svelte-adapter-bun`, then add the adapter
 
 ```js
 // svelte.config.js
-import adapter from "@jonasbuerger/svelte-adapter-bun";
+import adapter from '@jonasbuerger/svelte-adapter-bun';
 
 export default {
-  kit: {
-    adapter: adapter(),
-  },
+	kit: {
+		adapter: adapter(),
+	},
 };
 ```
 
@@ -33,24 +33,24 @@ The adapter can be configured with various options:
 
 ```js
 // svelte.config.js
-import adapter from "@jonasbuerger/svelte-adapter-bun";
+import adapter from '@jonasbuerger/svelte-adapter-bun';
 export default {
-  kit: {
-    adapter: adapter({
-      out: "build",
-      assets: true,
-      envPrefix: "MY_CUSTOM_",
-      development: true,
-      // precompress: true,
-      precompress: {
-        brotli: true,
-        gzip: true,
-        files: ["htm", "html"],
-      },
-      dynamic_origin: true,
-      xff_depth: 0,
-    }),
-  },
+	kit: {
+		adapter: adapter({
+			out: 'build',
+			assets: true,
+			envPrefix: 'MY_CUSTOM_',
+			development: true,
+			// precompress: true,
+			precompress: {
+				brotli: true,
+				gzip: true,
+				files: ['htm', 'html'],
+			},
+			dynamic_origin: true,
+			xff_depth: 0,
+		}),
+	},
 };
 ```
 
@@ -85,7 +85,7 @@ file extensions to compress.It defaults to `['html','js','json','css','svg','xml
 If you need to change the name of the environment variables used to configure the deployment (for example, to deconflict with environment variables you don't control), you can specify a prefix:
 
 ```js
-envPrefix: "MY_CUSTOM_";
+envPrefix: 'MY_CUSTOM_';
 ```
 
 ```
@@ -116,20 +116,20 @@ https://bun.sh/docs/api/websockets
 
 /** @type {import("@jonasbuerger/svelte-adapter-bun").WebSocketHandler} */
 export const handleWebsocket = {
-  open(ws) {
-    console.log("WebSocket opened");
-    ws.send("Hello from Server");
-  },
-  /**
-   * @param {Request} request
-   * @param {Function} upgrade
-   */
-  upgrade(request, upgrade) {
-    const url = new URL(request.url);
-    if (url.pathname.startsWith("/ws")) {
-      return upgrade(request);
-    }
-  },
+	open(ws) {
+		console.log('WebSocket opened');
+		ws.send('Hello from Server');
+	},
+	/**
+	 * @param {Request} request
+	 * @param {Function} upgrade
+	 */
+	upgrade(request, upgrade) {
+		const url = new URL(request.url);
+		if (url.pathname.startsWith('/ws')) {
+			return upgrade(request);
+		}
+	},
 };
 ```
 
@@ -179,7 +179,7 @@ PROTOCOL_HEADER=x-forwarded-proto HOST_HEADER=x-forwarded-host bun build/index.j
 
 ### `ADDRESS_HEADER` and `XFF_DEPTH`
 
-The [RequestEvent](https://kit.svelte.dev/docs/types#additional-types-requestevent) object passed to hooks and endpoints includes an `event.clientAddress` property representing the client's IP address. [Bun.js haven't got functionality](https://github.com/Jarred-Sumner/bun/issues/518) to get client's IP address, so SvelteKit will receive `127.0.0.1` or if your server is behind one or more proxies (such as a load balancer), you can get an IP address from headers, so we need to specify an `ADDRESS_HEADER` to read the address from:
+The [RequestEvent](https://kit.svelte.dev/docs/types#additional-types-requestevent) object passed to hooks and endpoints includes an `event.clientAddress` property representing the client's IP address. If your server is behind one or more proxies (such as a load balancer), you can get an IP address from headers, so we need to specify an `ADDRESS_HEADER` to read the address from:
 
 ```
 ADDRESS_HEADER=True-Client-IP bun build/index.js
