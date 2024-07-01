@@ -54,8 +54,8 @@ export default function (opts = {}) {
 			builder.writeServer(tmp);
 
 			writeFileSync(
-				`${tmp}/manifest.js`,
-				`export const manifest = ${builder.generateManifest({ relativePath: './' })};\n\n` +
+				`${out}/manifest.js`,
+				`export const manifest = ${builder.generateManifest({ relativePath: './server' })};\n\n` +
 					`export const prerendered = new Set(${JSON.stringify(builder.prerendered.paths)});\n`,
 			);
 
@@ -98,7 +98,7 @@ export default function (opts = {}) {
 			builder.copy(files, out, {
 				replace: {
 					SERVER: './server/index.js',
-					MANIFEST: './server/manifest.js',
+					MANIFEST: './manifest.js',
 					ENV_PREFIX: JSON.stringify(envPrefix),
 					dotENV_PREFIX: envPrefix,
 					BUILD_OPTIONS: JSON.stringify({ development, dynamic_origin: false, xff_depth, assets }),
