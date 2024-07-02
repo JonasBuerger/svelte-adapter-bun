@@ -101,7 +101,7 @@ export default function (opts = {}) {
           MANIFEST: "./server/manifest.js",
           ENV_PREFIX: JSON.stringify(envPrefix),
           dotENV_PREFIX: envPrefix,
-          BUILD_OPTIONS: JSON.stringify({ development, dynamic_origin: false, xff_depth, assets }),
+          BUILD_OPTIONS: JSON.stringify({ development, xff_depth, assets }),
         },
       });
 
