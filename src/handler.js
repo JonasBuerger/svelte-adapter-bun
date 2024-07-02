@@ -108,16 +108,6 @@ function serve(path, client = false) {
  */
 function ssr(request, _, bunServer) {
   const clientIp = bunServer.requestIP(request)?.address;
-  // For debugging
-  if (log_req) {
-    console.log("request", {
-      clientIp,
-      method: request.method,
-      url: request.url,
-      headers: Object.fromEntries(request.headers.entries()),
-    });
-  }
-
   const url = new URL(request.url);
   let req = request;
 
