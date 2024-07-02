@@ -141,7 +141,7 @@ function ssr(request, _, bunServer) {
   return server.respond(request, {
     getClientAddress() {
       if (address_header) {
-        const value = /** @type {string} */ (request.headers.get(address_header)) || "";
+        const value = /** @type {string} */ (req.headers.get(address_header)) || "";
 
         if (address_header === "x-forwarded-for") {
           const addresses = value.split(",");
