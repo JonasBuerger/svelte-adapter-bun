@@ -1,6 +1,6 @@
 {
   "name": "@jonasbuerger/svelte-adapter-bun",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -13,11 +13,12 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "files",
+    "files/*",
     "index.d.ts"
   ],
   "scripts": {
-    "prepublish": "rm -fr files && bun run build.js",
+    "build": "rm -fr files && bun run build.js",
+    "prepublish": "bun run build",
     "format": "prettier --write ."
   },
   "repository": {
