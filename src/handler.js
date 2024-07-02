@@ -1,6 +1,6 @@
 import { Server } from "SERVER";
 import { manifest } from "MANIFEST";
-import { build_options, env } from "./env";
+import { build_options, env } from "./env.js";
 import { fileURLToPath } from "bun";
 import path from "path";
 import sirv from "./sirv";
@@ -17,7 +17,7 @@ const origin = env("ORIGIN", undefined);
 const address_header = env("ADDRESS_HEADER", "").toLowerCase();
 const protocol_header = env("PROTOCOL_HEADER", "").toLowerCase();
 const host_header = env("HOST_HEADER", "host").toLowerCase();
-const development = env("SERVERDEV", build_options.development ?? false)
+const development = env("SERVERDEV", build_options.development ?? false);
 
 /** @param {boolean} assets */
 export default function (assets) {
@@ -54,6 +54,9 @@ export default function (assets) {
    * @returns
    */
   function defaultAcceptWebsocket(request, server) {
+    if (development) {
+      console.log("defaultAcceptWebsocket(", request.url, ")");
+    }
     return server.upgrade(request);
   }
 
@@ -85,8 +88,8 @@ export default function (assets) {
 }
 
 function serve(path, client = false) {
-  if(development){
-    console.log("serve(\"", path, "\", ", client, ")");
+  if (development) {
+    console.log("serve(path:", path, ", client:", client, ")");
   }
   return (
     existsSync(path) &&
@@ -115,42 +118,33 @@ function ssr(request, _, bunServer) {
   const url = new URL(request.url);
   let req = request;
 
-  if(development){
-    console.log("ssr(\"", request.url, "\")");
+  if (development) {
+    console.log("ssr(", url.toString(), ",", clientIp, ")");
   }
 
   if (origin) {
-    if(development){
-      console.log("ssr.origin(\"", origin, "\")");
+    if (development) {
+      console.log("Handling origin header");
     }
     const new_url = new URL(origin);
     new_url.pathname = url.pathname;
     new_url.search = url.search;
     new_url.hash = url.hash;
     req = clone_req(new_url, request);
-    if(development){
-      console.log("ssr.origin.new_url(\"", new_url.toString(), "\")");
-      console.log("ssr.origin.req_url(\"", req.url, "\")");
-    }
   } else if (
     (host_header && url.host !== request.headers.get(host_header)) ||
     (protocol_header && url.protocol !== request.headers.get(protocol_header) + ":")
   ) {
+    if (development) {
+      console.log("Handling x-forwarded-* header:", host_header, protocol_header);
+    }
     if (host_header) {
       url.host = request.headers.get(host_header);
     }
     if (protocol_header) {
       url.protocol = request.headers.get(protocol_header) + ":";
     }
-    if(development){
-      console.log("ssr.header(\"", host_header, "\", \"", protocol_header, "\")");
-      console.log("ssr.header(\"", url.host, "\", \"", url.protocol, "\")");
-    }
     req = clone_req(url, request);
-    if(development){
-      console.log("ssr.header.new_url(\"", url.toString(), "\")");
-      console.log("ssr.header.req_url(\"", req.url, "\")");
-    }
   }
 
   if (address_header && !request.headers.has(address_header)) {
@@ -163,6 +157,9 @@ function ssr(request, _, bunServer) {
 
   return server.respond(req, {
     getClientAddress() {
+      if (development) {
+        console.log("getClientAddress(", req.url, ")");
+      }
       if (address_header) {
         const value = /** @type {string} */ (req.headers.get(address_header)) || "";
 
@@ -210,6 +207,9 @@ function ssr(request, _, bunServer) {
  * @returns {Request}
  */
 function clone_req(url, request) {
+  if (development) {
+    console.log("Rewriting request.url", request.url, "->", url.toString());
+  }
   return new Request({
     url,
     method: request.method,

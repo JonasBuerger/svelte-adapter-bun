@@ -23,7 +23,7 @@ interface BuildOptions {
   development?: boolean;
   /**
    * The default value of XFF_DEPTH if environment is not set.
-   * @default 1
+   * @default 0
    */
   xff_depth?: number;
   /**
