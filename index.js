@@ -11,6 +11,10 @@ import glob from "tiny-glob";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
 import zlib from "zlib";
+import { rollup } from "rollup";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
 
 const pipe = promisify(pipeline);
 
@@ -25,10 +29,12 @@ export default function (opts = {}) {
     development = false,
     xff_depth = 0,
     assets = true,
+    transpileBun = true,
   } = opts;
   return {
     name: "@jonasbuerger/svelte-adapter-bun",
     async adapt(builder) {
+      const buildDir = builder.getBuildDirectory("adapter-bun");
       builder.rimraf(out);
       builder.mkdirp(out);
 
@@ -45,28 +51,69 @@ export default function (opts = {}) {
       }
 
       builder.log.minor("Building server");
-      builder.writeServer(`${out}/server`);
+      builder.writeServer(buildDir);
 
       writeFileSync(
-        `${out}/manifest.js`,
-        `export const manifest = ${builder.generateManifest({ relativePath: "./server" })};\n\n` +
+        `${buildDir}/manifest.js`,
+        `export const manifest = ${builder.generateManifest({ relativePath: "./" })};\n\n` +
           `export const prerendered = new Set(${JSON.stringify(builder.prerendered.paths)});\n`,
       );
 
       builder.log.minor("Patching server (websocket support)");
-      patchServerWebsocketHandler(`${out}/server`);
+      patchServerWebsocketHandler(buildDir);
 
       const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+
+      // we bundle the Vite output so that deployments only need
+      // their production dependencies. Anything in devDependencies
+      // will get included in the bundled code
+      const bundle = await rollup({
+        input: {
+          index: `${buildDir}/index.js`,
+          manifest: `${buildDir}/manifest.js`,
+        },
+        external: [
+          // dependencies could have deep exports, so we need a regex
+          ...Object.keys(pkg.dependencies || {}).map(d => new RegExp(`^${d}(\\/.*)?$`)),
+        ],
+        plugins: [
+          nodeResolve({
+            preferBuiltins: true,
+            exportConditions: ["node"],
+          }),
+          // @ts-ignore https://github.com/rollup/plugins/issues/1329
+          commonjs({ strictRequires: true }),
+          // @ts-ignore https://github.com/rollup/plugins/issues/1329
+          json(),
+        ],
+      });
+
+      await bundle.write({
+        dir: `${out}/server`,
+        format: "esm",
+        sourcemap: true,
+        chunkFileNames: "chunks/[name]-[hash].js",
+      });
 
       builder.copy(files, out, {
         replace: {
           SERVER: "./server/index.js",
-          MANIFEST: "./manifest.js",
+          MANIFEST: "./server/manifest.js",
           ENV_PREFIX: JSON.stringify(envPrefix),
           dotENV_PREFIX: envPrefix,
           BUILD_OPTIONS: JSON.stringify({ development, dynamic_origin: false, xff_depth, assets }),
         },
       });
+
+      if (transpileBun) {
+        const files = await glob("./server/**/*.js", { cwd: out, absolute: true });
+        const transpiler = new Bun.Transpiler({ loader: "js" });
+        for (const file of files) {
+          const src = await Bun.file(file).text();
+          if (src.startsWith("// @bun")) continue;
+          await Bun.write(file, "// @bun\n" + transpiler.transformSync(src));
+        }
+      }
 
       let package_data = {
         name: "bun-sveltekit-app",
@@ -77,7 +124,7 @@ export default function (opts = {}) {
         scripts: {
           start: "bun ./index.js",
         },
-        dependencies: { cookie: "latest", devalue: "latest", "set-cookie-parser": "latest" },
+        dependencies: {},
       };
 
       try {
