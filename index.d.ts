@@ -546,4 +546,4 @@ export interface WebSocketHandler<T = undefined> {
   publishToSelf?: boolean;
 }
 
-export default function plugin(options?: AdapterOptions): Adapter;
+export default function (options?: AdapterOptions): Adapter;

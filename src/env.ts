@@ -23,11 +23,7 @@ if (ENV_PREFIX) {
   }
 }
 
-/**
- * @param {string} name
- * @param {any} fallback
- */
-export function env(name, fallback) {
+export function env(name: string, fallback: any): any {
   const prefixed = ENV_PREFIX + name;
 
   return prefixed in Bun.env ? Bun.env[prefixed] : fallback;

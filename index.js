@@ -20,17 +20,19 @@ const pipe = promisify(pipeline);
 
 const files = fileURLToPath(new URL("./files", import.meta.url).href);
 
-/** @type {import('.').default} */
-export default function (opts = {}) {
-  const {
-    out = "build",
-    precompress = false,
-    envPrefix = "",
-    development = false,
-    xff_depth = 0,
-    assets = true,
-    transpileBun = true,
-  } = opts;
+/**
+ * @return {import('@sveltejs/kit').Adapter}
+ * @type {import('.').default}
+ */
+export default function ({
+  out = "build",
+  precompress = false,
+  envPrefix = "",
+  development = false,
+  xff_depth = 0,
+  assets = true,
+  transpileBun = true,
+}) {
   return {
     name: "@jonasbuerger/svelte-adapter-bun",
     async adapt(builder) {

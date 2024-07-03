@@ -1,9 +1,23 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "target": "esnext",
-    "types": ["bun-types"]
-  }
+    "types": ["bun"],
+    "emitDeclarationOnly": true,
+    "allowSyntheticDefaultImports": true,
+    //"declarationDir": "./types",
+  },
+  "include": [
+    "src/index.ts",
+    "index.d.ts"
+  ],
+  "exclude": [
+    "../node_modules/**"
+  ]
 }

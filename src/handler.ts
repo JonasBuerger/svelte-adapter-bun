@@ -1,70 +1,72 @@
+// @ts-ignore
 import { Server } from "SERVER";
+// @ts-ignore
 import { manifest } from "MANIFEST";
 import { build_options, env } from "./env.js";
-import { fileURLToPath } from "bun";
+import {
+  fileURLToPath,
+  type Server as BunServer,
+  type ServeOptions,
+  type WebSocketHandler
+} from "bun";
 import path from "path";
-import sirv from "./sirv";
+import sirv from "sirv";
 import { existsSync } from "fs";
+import type { Server as KitServer } from "@sveltejs/kit";
+import type { NextHandler } from "sirv";
+import { IncomingMessage, ServerResponse } from "node:http";
 
 const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)));
-
-/** @type {import('@sveltejs/kit').Server} */
-const server = new Server(manifest);
+type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean
+type FetchHandler = ServeOptions['fetch']
+const server = new Server(manifest) as KitServer & { websocket: () => WebSocketHandler & { upgrade?: WebSocketUpgradeHandler} };
 await server.init({ env: (Bun || process).env });
 
-const xff_depth = parseInt(env("XFF_DEPTH", build_options.xff_depth ?? 0));
-const origin = env("ORIGIN", undefined);
-const address_header = env("ADDRESS_HEADER", "").toLowerCase();
-const protocol_header = env("PROTOCOL_HEADER", "").toLowerCase();
-const host_header = env("HOST_HEADER", "host").toLowerCase();
-const development = env("SERVERDEV", build_options.development ?? false);
+const xff_depth: number = parseInt(env("XFF_DEPTH", build_options.xff_depth ?? 0));
+const origin : string | undefined = env("ORIGIN", undefined);
+const address_header : string = env("ADDRESS_HEADER", "").toLowerCase();
+const protocol_header : string = env("PROTOCOL_HEADER", "").toLowerCase();
+const host_header : string = env("HOST_HEADER", "host").toLowerCase();
+const development : boolean = !!env("SERVERDEV", build_options.development ?? false);
 
-/** @param {boolean} assets */
-export default function (assets) {
-  let handlers = [
+export default function (assets: boolean): { fetch: FetchHandler, websocket?: WebSocketHandler } {
+  const handlers = [
     assets && serve(path.join(__dirname, "/client"), true),
     assets && serve(path.join(__dirname, "/prerendered")),
     ssr,
   ].filter(Boolean);
-
-  /**
-   * @param {Request} req
-   * @param {import('bun').Server} srv
-   */
-  function handler(req, srv) {
-    function handle(i) {
+  const handler: FetchHandler = (request, server) => {
+    const handle = (i: number) => {
+      new IncomingMessage()
+      let res = new ServerResponse(request);
+      res.end()
       return handlers[i](
-        req,
+        request,
         () => {
           if (i < handlers.length) {
             return handle(i + 1);
           } else {
-            return new Response(404, { status: 404 });
+            return new Response("404", { status: 404 });
           }
         },
-        srv,
+        server,
       );
     }
     return handle(0);
   }
 
-  /**
-   * @param {Request} request
-   * @param {import('bun').Server} server
-   * @returns
-   */
-  function defaultAcceptWebsocket(request, server) {
+  const defaultAcceptWebsocket: WebSocketUpgradeHandler = (request, server) => {
     if (development) {
       console.log("defaultAcceptWebsocket(", request.url, ")");
     }
     return server.upgrade(request);
-  }
+  };
 
   try {
     const handleWebsocket = server.websocket();
     if (handleWebsocket) {
       return {
-        httpserver: async (req, srv) => {
+        fetch: async (req, srv) => {
           if (
             req.headers.get("connection")?.toLowerCase().includes("upgrade") &&
             req.headers.get("upgrade")?.toLowerCase() === "websocket"
@@ -74,7 +76,7 @@ export default function (assets) {
               return;
             }
           }
-          return handler(req, srv);
+          return handler.bind(srv)(req, srv);
         },
         websocket: handleWebsocket,
       };
@@ -83,37 +85,31 @@ export default function (assets) {
     console.warn("Fail: websocket handler error:", e);
   }
   return {
-    httpserver: handler,
+    fetch: handler,
   };
 }
 
-function serve(path, client = false) {
+function serve(path: string, client:boolean = false) {
   if (development) {
     console.log("serve(path:", path, ", client:", client, ")");
   }
-  return (
-    existsSync(path) &&
+  return existsSync(path) &&
     sirv(path, {
       etag: true,
       gzip: true,
       brotli: true,
       setHeaders:
         client &&
-        ((headers, pathname) => {
+        (({ setHeader }, pathname) => {
           if (pathname.startsWith(`/${manifest.appDir}/immutable/`)) {
-            headers.set("cache-control", "public,max-age=31536000,immutable");
+            setHeader("cache-control", "public,max-age=31536000,immutable");
           }
-          return headers;
         }),
     })
-  );
+
 }
 
-/**
- * @param {Request} request
- * @param {import('bun').Server} bunServer
- */
-function ssr(request, _, bunServer) {
+function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
   const clientIp = bunServer.requestIP(request)?.address;
   const url = new URL(request.url);
   let req = request;
@@ -201,19 +197,13 @@ function ssr(request, _, bunServer) {
   });
 }
 
-/**
- * @param {string|URL} url
- * @param {Request} request
- * @returns {Request}
- */
-function clone_req(url, request) {
+function clone_req(url: string | URL, request: Request) {
   if (development) {
     console.log("Rewriting request.url", request.url, "->", url.toString());
   }
-  return new Request({
-    url,
-    method: request.method,
+  return new Request(url, {
     headers: request.headers,
+    method: request.method,
     body: request.body,
     referrer: request.referrer,
     referrerPolicy: request.referrerPolicy,
@@ -221,6 +211,6 @@ function clone_req(url, request) {
     credentials: request.credentials,
     cache: request.cache,
     redirect: request.redirect,
-    integrity: request.integrity,
+    integrity: request.integrity
   });
 }
