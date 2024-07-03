@@ -1,9 +1,10 @@
 /*! MIT © Luke Edwards https://github.com/lukeed/sirv/blob/master/packages/sirv/index.js */
-import { existsSync, statSync, Stats } from "fs";
+import { existsSync, statSync, type Stats } from "fs";
 import { join, normalize, resolve } from "path";
 import { totalist } from "totalist/sync";
+import type { Options, RequestHandler, SirvFile, SirvFilesGetter } from "./bunsirv";
 
-function toAssume(uri, extns) {
+function toAssume(uri: string, extns: string[]): string[] {
   let i = 0,
     x,
     len = uri.length - 1;
@@ -22,7 +23,7 @@ function toAssume(uri, extns) {
   return arr;
 }
 
-function viaCache(cache, uri, extns) {
+function viaCache(cache: Record<string, SirvFile>, uri: string, extns: string[]): SirvFile {
   let i = 0,
     data,
     arr = toAssume(uri, extns);
@@ -31,66 +32,65 @@ function viaCache(cache, uri, extns) {
   }
 }
 
-function viaLocal(dir, isEtag, uri, extns) {
+function viaLocal(dir: string, isEtag: boolean, uri: string, extns: string[]): SirvFile {
   let i = 0,
     arr = toAssume(uri, extns);
-  let abs, stats, name, headers;
+  let filepath, stats, name, headers;
   for (; i < arr.length; i++) {
-    abs = normalize(join(dir, (name = arr[i])));
-    if (abs.startsWith(dir) && existsSync(abs)) {
-      stats = statSync(abs);
+    filepath = normalize(join(dir, (name = arr[i])));
+    if (filepath.startsWith(dir) && existsSync(filepath)) {
+      stats = statSync(filepath);
       if (stats.isDirectory()) continue;
       headers = toHeaders(name, stats, isEtag);
       headers.set("Cache-Control", isEtag ? "no-cache" : "no-store");
-      return { abs, stats, headers };
+      return { filepath, stats, headers };
     }
   }
 }
 
-function is404(req) {
+const is404 : RequestHandler = () => {
   return new Response(null, {
     status: 404,
-    statusText: "404",
+    statusText: "404 Not Found",
   });
 }
-/**
- *
- * @param {Request} req
- * @param {import('../sirv').SirvData} data
- */
-function send(req, data) {
+
+function send(req: Request, filepath: string, stats: Stats, headers: Headers): Response {
   let code = 200,
-    opts = {};
+    opts: {end?: number, start?: number, range?: boolean} = {};
 
   if (req.headers.has("range")) {
     code = 206;
     let [x, y] = req.headers.get("range").replace("bytes=", "").split("-");
-    let end = (opts.end = parseInt(y, 10) || data.stats.size - 1);
+    let end = (opts.end = parseInt(y, 10) || stats.size - 1);
     let start = (opts.start = parseInt(x, 10) || 0);
 
-    if (start >= data.stats.size || end >= data.stats.size) {
-      data.headers.set("Content-Range", `bytes */${data.stats.size}`);
+    if (end >= stats.size) {
+      end = stats.size - 1;
+    }
+    if (start >= stats.size) {
+      headers.set("Content-Range", `bytes */${stats.size}`);
       return new Response(null, {
-        headers: data.headers,
+        headers: headers,
         status: 416,
       });
     }
 
-    data.headers.set("Content-Range", `bytes ${start}-${end}/${data.stats.size}`);
-    data.headers.set("Content-Length", end - start + 1);
-    data.headers.set("Accept-Ranges", "bytes");
+    headers.set("Content-Range", `bytes ${start}-${end}/${stats.size}`);
+    headers.set("Content-Length", (end - start + 1).toString());
+    headers.set("Accept-Ranges", "bytes");
     opts.range = true;
   }
 
   if (opts.range) {
-    return new Response(Bun.file(data.abs).slice(opts.start, opts.end), {
-      headers: data.headers,
+    return new Response(Bun.file(filepath).slice(opts.start, opts.end), {
+      headers: headers,
       status: code,
     });
   }
 
-  return new Response(Bun.file(data.abs), {
-    headers: data.headers,
+  return new Response(Bun.file(filepath), {
+    headers: headers,
     status: code,
   });
 }
@@ -99,13 +99,8 @@ const ENCODING = {
   ".br": "br",
   ".gz": "gzip",
 };
-/**
- *
- * @param {string} name
- * @param {Stats} stats
- * @param {boolean} isEtag
- */
-function toHeaders(name, stats, isEtag) {
+
+function toHeaders(name: string, stats: Stats, isEtag: boolean): Headers {
   let enc = ENCODING[name.slice(-3)];
 
   if (enc) {
@@ -115,7 +110,7 @@ function toHeaders(name, stats, isEtag) {
   let ctype = Bun.file(name).type;
 
   let headers = new Headers({
-    "Content-Length": stats.size,
+    "Content-Length": stats.size.toString(),
     "Content-Type": ctype,
     "Last-Modified": stats.mtime.toUTCString(),
   });
@@ -132,12 +127,7 @@ function toHeaders(name, stats, isEtag) {
   return headers;
 }
 
-/**
- * @param {import("../sirv").Options} opts
- * @param {string} dir
- * @return {import('../sirv').RequestHandler}
- */
-export default function (dir, opts = {}) {
+export default function (dir: string, opts: Options = {}): RequestHandler {
   dir = resolve(dir || ".");
 
   let isNotFound = opts.onNoMatch || is404;
@@ -147,17 +137,9 @@ export default function (dir, opts = {}) {
   let gzips = opts.gzip && extensions.map(x => `${x}.gz`).concat("gz");
   let brots = opts.brotli && extensions.map(x => `${x}.br`).concat("br");
 
-  /** @type {import('../sirv').SirvFiles} */
-  const FILES = {};
+  const FILES: Record<string, SirvFile> = {};
 
-  // let fallback = '/';
   let isEtag = !!opts.etag;
-  // let isSPA = !!opts.single;
-
-  // if (typeof opts.single === 'string') {
-  //     let idx = opts.single.lastIndexOf('.');
-  //     fallback += !!~idx ? opts.single.substring(0, idx) : opts.single;
-  // }
 
   let ignores = [];
   if (opts.ignores !== false) {
@@ -174,7 +156,7 @@ export default function (dir, opts = {}) {
   else if (cc && opts.maxAge === 0) cc += ",must-revalidate";
 
   if (!opts.dev) {
-    totalist(dir, (name, abs, stats) => {
+    totalist(dir, (name, filepath, stats) => {
       if (/\.well-known[\\+\/]/.test(name)) {
       } // keep
       else if (!opts.dotfiles && /(^\.|[\\+|\/+]\.)/.test(name)) return;
@@ -182,16 +164,11 @@ export default function (dir, opts = {}) {
       let headers = toHeaders(name, stats, isEtag);
       if (cc) headers.set("Cache-Control", cc);
 
-      FILES["/" + name.normalize().replace(/\\+/g, "/")] = { abs, stats, headers };
+      FILES["/" + name.normalize().replace(/\\+/g, "/")] = { filepath, stats, headers };
     });
   }
 
-  /**
-   * @callback lookup
-   * @return { import('../sirv').SirvData }
-   */
-  /**@type {lookup} */
-  let lookup = opts.dev ? viaLocal.bind(0, dir, isEtag) : viaCache.bind(0, FILES);
+  let lookup: SirvFilesGetter = opts.dev ? viaLocal.bind(0, dir, isEtag) : viaCache.bind(0, FILES);
 
   /**
    * @param {Request} req
@@ -206,40 +183,27 @@ export default function (dir, opts = {}) {
 
     if (pathname.indexOf("%") !== -1) {
       try {
-        pathname = decodeURIComponent(pathname);
+        pathname = decodeURI(pathname);
       } catch (err) {
         /* malform uri */
       }
     }
 
-    // tmp = lookup(pathname, extns)
-    // if (!tmp) {
-    //     if (isSPA && !isMatch(pathname, ignores)) {
-    //         tmp = lookup(fallback, extns)
-    //     }
-    // }
-    let data = lookup(pathname, extns);
-    //  || isSPA && !isMatch(pathname, ignores) && lookup(fallback, extns);
+    let { filepath = '', stats = undefined, headers = undefined } = lookup(pathname, extns);
+    if (!filepath) return next ? next() : isNotFound(req , next);
 
-    if (!data) return next ? next() : isNotFound(req);
-
-    if (isEtag && req.headers.get("if-none-match") === data.headers.get("ETag")) {
+    if (isEtag && req.headers.get("if-none-match") === headers.get("ETag")) {
       return new Response(null, { status: 304 });
     }
-
-    data = {
-      ...data,
-      // clone a new headers to prevent the cached one getting modified
-      headers: new Headers(data.headers),
-    };
+    headers = new Headers(headers)
 
     if (gzips || brots) {
-      data.headers.append("Vary", "Accept-Encoding");
+      headers.append("Vary", "Accept-Encoding");
     }
 
     if (setHeaders) {
-      data.headers = setHeaders(data.headers, pathname, data.stats);
+      setHeaders(headers, pathname, stats);
     }
-    return send(req, data);
+    return send(req, filepath, stats, headers);
   };
 }

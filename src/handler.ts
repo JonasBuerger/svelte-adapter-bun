@@ -10,11 +10,10 @@ import {
   type WebSocketHandler
 } from "bun";
 import path from "path";
-import sirv from "sirv";
+import sirv from "bunsirv";
 import { existsSync } from "fs";
 import type { Server as KitServer } from "@sveltejs/kit";
-import type { NextHandler } from "sirv";
-import { IncomingMessage, ServerResponse } from "node:http";
+import type { NextHandler } from "bunsirv";
 
 const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)));
 type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean
@@ -37,8 +36,6 @@ export default function (assets: boolean): { fetch: FetchHandler, websocket?: We
   ].filter(Boolean);
   const handler: FetchHandler = (request, server) => {
     const handle = (i: number) => {
-      new IncomingMessage()
-      let res = new ServerResponse(request);
       res.end()
       return handlers[i](
         request,

@@ -11,11 +11,10 @@
     "types": ["bun"],
     "emitDeclarationOnly": true,
     "allowSyntheticDefaultImports": true,
-    //"declarationDir": "./types",
+    "declarationDir": ".",
   },
   "include": [
-    "src/index.ts",
-    "index.d.ts"
+    "src/*",
   ],
   "exclude": [
     "../node_modules/**"
