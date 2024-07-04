@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "build:types": "tsc -d",
-    "build": "bun build src/index.ts src/handler.ts --target=bun --format=esm --splitting --outdir=files --external=SERVER --external=MANIFEST",
+    "build": "bun build src/index.ts src/handler.ts --target=bun --format=esm --splitting --outdir=files --external=__SERVER --external=__MANIFEST",
     "prepack": "bun run build",
     "format": "prettier --write ."
   },

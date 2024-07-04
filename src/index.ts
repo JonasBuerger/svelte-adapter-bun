@@ -1,7 +1,7 @@
 /*! MIT © Volodymyr Palamar https://github.com/gornostay25/svelte-adapter-bun */
 import { serve, type Serve } from "bun";
-import { build_options, env } from "./env.js";
-import handler from "./handler.js";
+import { build_options, env } from "./env";
+import handler from "./handler";
 
 const hostname: string = env("HOST", "0.0.0.0");
 const port: number = parseInt(env("PORT", 3000));

@@ -1,8 +1,8 @@
 // @ts-ignore
-import { Server } from "SERVER";
+import { Server } from "__SERVER";
 // @ts-ignore
-import { manifest } from "MANIFEST";
-import { build_options, env } from "./env.js";
+import { manifest } from "__MANIFEST";
+import { build_options, env, env_prefix } from "./env";
 import {
   fileURLToPath,
   type Server as BunServer,
@@ -10,10 +10,9 @@ import {
   type WebSocketHandler
 } from "bun";
 import path from "path";
-import sirv from "bunsirv";
+import { default as bunsirv, type NextHandler } from "./bunsirv";
 import { existsSync } from "fs";
 import type { Server as KitServer } from "@sveltejs/kit";
-import type { NextHandler } from "bunsirv";
 
 const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)));
 type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean
@@ -36,7 +35,6 @@ export default function (assets: boolean): { fetch: FetchHandler, websocket?: We
   ].filter(Boolean);
   const handler: FetchHandler = (request, server) => {
     const handle = (i: number) => {
-      res.end()
       return handlers[i](
         request,
         () => {
@@ -91,15 +89,15 @@ function serve(path: string, client:boolean = false) {
     console.log("serve(path:", path, ", client:", client, ")");
   }
   return existsSync(path) &&
-    sirv(path, {
+    bunsirv(path, {
       etag: true,
       gzip: true,
       brotli: true,
       setHeaders:
         client &&
-        (({ setHeader }, pathname) => {
+        (( headers, pathname) => {
           if (pathname.startsWith(`/${manifest.appDir}/immutable/`)) {
-            setHeader("cache-control", "public,max-age=31536000,immutable");
+            headers.set("cache-control", "public,max-age=31536000,immutable");
           }
         }),
     })
@@ -143,7 +141,7 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
   if (address_header && !request.headers.has(address_header)) {
     throw new Error(
       `Address header was specified with ${
-        ENV_PREFIX + "ADDRESS_HEADER"
+        env_prefix + "ADDRESS_HEADER"
       }=${address_header} but is absent from request`,
     );
   }
@@ -160,12 +158,12 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
           const addresses = value.split(",");
 
           if (xff_depth < 0) {
-            throw new Error(`${ENV_PREFIX + "XFF_DEPTH"} must be a positive integer`);
+            throw new Error(`${env_prefix + "XFF_DEPTH"} must be a positive integer`);
           }
 
           if (xff_depth > addresses.length) {
             throw new Error(
-              `${ENV_PREFIX + "XFF_DEPTH"} is ${xff_depth}, but only found ${
+              `${env_prefix + "XFF_DEPTH"} is ${xff_depth}, but only found ${
                 addresses.length
               } addresses`,
             );

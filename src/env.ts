@@ -8,15 +8,18 @@ const expected = new Set([
   "HOST_HEADER",
   "SERVERDEV",
 ]);
-export const build_options = BUILD_OPTIONS;
 
-if (ENV_PREFIX) {
+// @ts-ignore
+export const build_options = __BUILD_OPTIONS as BuildOptions;
+export const env_prefix: string = "__ENV_PREFIX";
+
+if (env_prefix) {
   for (const name in Bun.env) {
-    if (name.startsWith(ENV_PREFIX)) {
-      const unprefixed = name.slice(ENV_PREFIX.length);
+    if (name.startsWith(env_prefix)) {
+      const unprefixed = name.slice(env_prefix.length);
       if (!expected.has(unprefixed)) {
         throw new Error(
-          `You should change envPrefix (${ENV_PREFIX}) to avoid conflicts with existing environment variables — unexpectedly saw ${name}`,
+          `You should change envPrefix (${env_prefix}) to avoid conflicts with existing environment variables — unexpectedly saw ${name}`,
         );
       }
     }
@@ -24,7 +27,7 @@ if (ENV_PREFIX) {
 }
 
 export function env(name: string, fallback: any): any {
-  const prefixed = ENV_PREFIX + name;
+  const prefixed = env_prefix + name;
 
   return prefixed in Bun.env ? Bun.env[prefixed] : fallback;
 }

@@ -9,7 +9,7 @@
     "moduleResolution": "bundler",
     "target": "esnext",
     "types": ["bun"],
-    "emitDeclarationOnly": true,
+    "declaration": true,
     "allowSyntheticDefaultImports": true,
     "declarationDir": ".",
   },

@@ -2,7 +2,28 @@
 import { existsSync, statSync, type Stats } from "fs";
 import { join, normalize, resolve } from "path";
 import { totalist } from "totalist/sync";
-import type { Options, RequestHandler, SirvFile, SirvFilesGetter } from "./bunsirv";
+
+type Arrayable<T> = T | T[];
+export type NextHandler = () => void | Promise<void>;
+export type RequestHandler = (req: Request, next?: NextHandler) => void | Response | Promise<void | Response>;
+
+type SirvFile = {filepath: string, stats:Stats, headers:Headers}
+type SirvFilesGetter = (uri: string, extns: string[]) => SirvFile
+
+interface Options {
+  dev?: boolean;
+  etag?: boolean;
+  maxAge?: number;
+  immutable?: boolean;
+  single?: string | boolean;
+  ignores?: false | Arrayable<string | RegExp>;
+  extensions?: string[];
+  dotfiles?: boolean;
+  brotli?: boolean;
+  gzip?: boolean;
+  onNoMatch?: (req: Request, next: NextHandler) => Response;
+  setHeaders?: (headers: Headers, pathname: string, stats: Stats) => void;
+}
 
 function toAssume(uri: string, extns: string[]): string[] {
   let i = 0,
