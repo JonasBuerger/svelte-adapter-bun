@@ -10,12 +10,16 @@
       "types": "./index.d.ts",
       "import": "./index.js"
     },
+    "./bunsirv": {
+      "types": "./src/bunsirv.d.ts",
+      "import": null
+    },
     "./package.json": "./package.json"
   },
   "files": [
-    "src/*.d.ts",
-    "index.d.ts",
-    "index.ts",
+    "./src/*.d.ts",
+    "./*.d.ts",
+    "./index.js",
     "files"
   ],
   "scripts": {
