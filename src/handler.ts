@@ -13,7 +13,7 @@ import {
   fileURLToPath,
   type Server as BunServer,
   type ServeOptions,
-  type WebSocketHandler,
+  type WebSocketHandler as BunWebSocketHandler,
 } from "bun";
 import path from "path";
 import { default as bunsirv, type NextHandler } from "./bunsirv";
@@ -23,12 +23,13 @@ import type { Server as KitServer } from "@sveltejs/kit";
 const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)));
 type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean;
 type FetchHandler = ServeOptions["fetch"];
+export type WebSocketHandler = BunWebSocketHandler & { upgrade?: WebSocketUpgradeHandler }
 const server = new Server(manifest) as KitServer & {
-  websocket: () => WebSocketHandler & { upgrade?: WebSocketUpgradeHandler };
+  websocket: () => WebSocketHandler;
 };
 await server.init({ env: (Bun || process).env });
 
-export default function (assets: boolean): { fetch: FetchHandler; websocket?: WebSocketHandler } {
+export default function (assets: boolean): { fetch: FetchHandler; websocket?: BunWebSocketHandler } {
   const handlers = [
     assets && serve(path.join(__dirname, "/client"), true),
     assets && serve(path.join(__dirname, "/prerendered")),

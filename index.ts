@@ -16,8 +16,9 @@ import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import { type Adapter } from "@sveltejs/kit";
+export type { WebSocketHandler } from "./src/handler"
 
-interface BuildOptions {
+export interface BuildOptions {
   /**
    * Render contextual errors? This enables bun's error page
    * @default false
@@ -40,7 +41,7 @@ interface BuildOptions {
   transpileBun?: boolean;
 }
 
-interface CompressOptions {
+export interface CompressOptions {
   /**
    * @default false
    */
@@ -57,7 +58,7 @@ interface CompressOptions {
   files?: string[];
 }
 
-interface AdapterOptions extends BuildOptions {
+export interface AdapterOptions extends BuildOptions {
   /**
    * The directory to build the server to. It defaults to build — i.e. node build would start the server locally after it has been created.
    * @default "build"

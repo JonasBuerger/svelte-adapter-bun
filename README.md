@@ -17,15 +17,9 @@ export default {
 };
 ```
 
-After building the server (`vite build`), use the following command to start:
+After building the server `vite build`, use `vite preview` to start the server.
 
-```
-# go to build directory
-cd build/
-
-# run Bun
-bun run start
-```
+During development, you can use `vite dev`, for hot-reloading:
 
 ## Options
 
@@ -56,52 +50,70 @@ export default {
 
 ### out
 
-The directory to build the server to. It defaults to `build` — i.e. `bun run build/index.js` would start the server locally after it has been created.
+Default: `"build"`
+
+The directory to build the server to — i.e. `bun run build/index.js` would start the server locally after it has been created.
 
 ### assets
 
-Browse a static assets. Default: `true`
+Default: `true`
 
-- [x] Support [HTTP range requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests)
+Serve static assets.
+
+- [x] Supports [HTTP range requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests)
 
 ### precompress
 
-Enables precompressing using gzip and brotli for assets and prerendered pages. It defaults to `false`.
+Default: `false`
+
+Enables precompressing using gzip and brotli for assets and prerendered pages.
 
 #### brotli
 
-Enable brotli precompressing. It defaults to `false`.
+Default: `false`
+
+Enable brotli precompressing.
 
 #### gzip
 
-Enable gzip precompressing. It defaults to `false`.
+Default: `false`
+
+Enable gzip precompressing.
 
 #### files
 
-file extensions to compress. It defaults to `['html','js','json','css','svg','xml','wasm']`.
+Default: `['html','js','json','css','svg','xml','wasm']`
+
+File extensions to compress.
 
 ### envPrefix
 
-If you need to change the name of the environment variables used to configure the deployment (for example, to deconflict with environment variables you don't control), you can specify a prefix:
+If you need to change the name of the environment variables used to configure the deployment.
+For example, to deconflict with environment variables you don't control.
+
+Example
 
 ```js
-envPrefix: "MY_CUSTOM_";
+// svelte.config.js
+envPrefix: "MY_CUSTOM_"
 ```
-
-```
-MY_CUSTOM_HOST=127.0.0.1 \
-MY_CUSTOM_PORT=4000 \
-MY_CUSTOM_ORIGIN=https://my.site \
-bun build/index.js
+```dotenv
+MY_CUSTOM_HOST="127.0.0.1"
+MY_CUSTOM_PORT=4000
+MY_CUSTOM_ORIGIN="https://my.site"
 ```
 
 ### development
 
-This enables bun's error page. Default: `false`
+Default: `false`
+
+Enables bun's error page and additional logging.
 
 ### xff_depth
 
-The default value of XFF_DEPTH if environment is not set. Default: `0`
+Default: `0`
+
+The count of trusted proxies before your server.
 
 ## :spider_web: WebSocket Server
 
@@ -118,9 +130,9 @@ export const handleWebsocket = {
   },
   /**
    * @param {Request} request
-   * @param {Server} server
+   * @param {import('bun').Server} server
    */
-  upgrade(request, upgrade) {
+  upgrade(request, server) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/ws")) {
       return server.upgrade(request);
@@ -131,37 +143,39 @@ export const handleWebsocket = {
 
 ## :desktop_computer: Environment variables
 
-> Bun automatically reads configuration from `.env.local`, `.env.development` and `.env`
+> Bun [automatically reads configuration](https://bun.sh/docs/runtime/env) from `.env.local`, `.env.development`, `.env.production` and `.env` 
 
 ### `PORT` and `HOST`
 
 By default, the server will accept connections on `0.0.0.0` using port 3000. These can be customized with the `PORT` and `HOST` environment variables:
 
-```
+```shell
 HOST=127.0.0.1 PORT=4000 bun build/index.js
 ```
 
 ### `ORIGIN`, `PROTOCOL_HEADER` and `HOST_HEADER`
+[SvelteKit Dokumentation](https://kit.svelte.dev/docs/adapter-node#environment-variables-origin-protocolheader-hostheader-and-port-header)
 
 HTTP doesn't give SvelteKit a reliable way to know the URL that is currently being requested. The simplest way to tell SvelteKit where the app is being served is to set the `ORIGIN` environment variable:
 
-```
+```shell
 ORIGIN=https://my.site bun build/index.js
 ```
 
 With this, a request for the `/stuff` pathname will correctly resolve to `https://my.site/stuff`. Alternatively, you can specify headers that tell SvelteKit about the request protocol and host, from which it can construct the origin URL:
 
-```
+```shell
 PROTOCOL_HEADER=x-forwarded-proto HOST_HEADER=x-forwarded-host bun build/index.js
 ```
 
 > [`x-forwarded-proto`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto) and [`x-forwarded-host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) are de facto standard headers that forward the original protocol and host if you're using a reverse proxy (think load balancers and CDNs). You should only set these variables if your server is behind a trusted reverse proxy; otherwise, it'd be possible for clients to spoof these headers.
 
 ### `ADDRESS_HEADER` and `XFF_DEPTH`
+[SvelteKit Dokumentation](https://kit.svelte.dev/docs/adapter-node#environment-variables-addressheader-and-xffdepth)
 
 The [RequestEvent](https://kit.svelte.dev/docs/types#additional-types-requestevent) object passed to hooks and endpoints includes an `event.clientAddress` property representing the client's IP address. If your server is behind one or more proxies (such as a load balancer), you can get an IP address from headers, so we need to specify an `ADDRESS_HEADER` to read the address from:
 
-```
+```shell
 ADDRESS_HEADER=True-Client-IP bun build/index.js
 ```
 

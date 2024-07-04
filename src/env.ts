@@ -2,6 +2,7 @@
 export { Server } from "__SERVER";
 // @ts-ignore
 export { manifest } from "__MANIFEST";
+import type { BuildOptions } from "..";
 
 const expected = new Set([
   "HOST",

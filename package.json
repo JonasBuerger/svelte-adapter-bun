@@ -1,23 +1,32 @@
 {
   "name": "@jonasbuerger/svelte-adapter-bun",
-  "version": "1.2.0",
+  "version": "2.0.1",
   "description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
-  "main": "index.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./index.ts"
+      "types": "./index.d.ts",
+      "import": "./index.js"
     },
     "./package.json": "./package.json"
   },
   "files": [
+    "src/*.d.ts",
+    "index.d.ts",
+    "index.ts",
     "files"
   ],
   "scripts": {
-    "build:types": "tsc -d",
-    "build": "bun build src/index.ts src/handler.ts --target=bun --format=esm --splitting --outdir=files --external=__SERVER --external=__MANIFEST",
-    "prepack": "bun run build",
-    "format": "prettier --write ."
+    "build": "bun run format && bun run build:types && bun run build:server",
+    "build:types": "bunx --bun tsc -d",
+    "build:server": "bun build src/index.ts src/handler.ts --target=bun --format=esm --splitting --outdir=files --external=__SERVER --external=__MANIFEST",
+    "format": "bunx --bun prettier --write .",
+    "prepack": "bun run build:all",
+    "postinstall": "bunx --bun patch-package && rm -f yarn.lock",
+    "clean": "rm -rf files && rm -rf ./*.js && rm -rf ./*.d.ts && rm -rf ./src/*.js && rm -rf ./src/*.d.ts && echo 'Done.'",
+    "watch": "bun --watch run build"
   },
   "repository": {
     "type": "git",
@@ -44,6 +53,7 @@
     "@types/bun": "^1.1.6",
     "@types/node": "^20.14.9",
     "conventional-changelog-conventionalcommits": "^8.0.0",
+    "patch-package": "^8.0.0",
     "prettier": "^3.3.2",
     "totalist": "^3.0.1",
     "typescript": "^5.5.3"

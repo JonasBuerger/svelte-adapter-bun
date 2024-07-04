@@ -1,0 +1,45 @@
+diff --git a/node_modules/bun-types/bun.d.ts b/node_modules/bun-types/bun.d.ts
+index 2649617..ed38785 100644
+--- a/node_modules/bun-types/bun.d.ts
++++ b/node_modules/bun-types/bun.d.ts
+@@ -115,6 +115,7 @@ declare module "bun" {
+ 		| ReadableStream;
+ 
+ 	class ShellError extends Error implements ShellOutput {
++		bytes(): Uint8Array;
+ 		readonly stdout: Buffer;
+ 		readonly stderr: Buffer;
+ 		readonly exitCode: number;
+diff --git a/node_modules/bun-types/globals.d.ts b/node_modules/bun-types/globals.d.ts
+index 7837840..c242d99 100644
+--- a/node_modules/bun-types/globals.d.ts
++++ b/node_modules/bun-types/globals.d.ts
+@@ -148,6 +148,7 @@ import type { WebSocket as _WebSocket } from "ws";
+ 
+ declare module "*.txt" {
+ 	var text: string;
++	// @ts-ignore
+ 	export = text;
+ }
+ 
+@@ -1849,6 +1850,7 @@ declare global {
+ 		 * import.meta.env === process.env
+ 		 * ```
+ 		 */
++		// @ts-ignore
+ 		readonly env: NodeJS.ProcessEnv;
+ 
+ 		/**
+diff --git a/node_modules/bun-types/overrides.d.ts b/node_modules/bun-types/overrides.d.ts
+index 46a1c2c..e0fb2c2 100644
+--- a/node_modules/bun-types/overrides.d.ts
++++ b/node_modules/bun-types/overrides.d.ts
+@@ -1,6 +1,7 @@
+ export {};
+ 
+-import type { Env, PathLike, BunFile } from "bun";
++import type { Env, BunFile } from "bun";
++import type { PathLike } from "fs";
+ 
+ declare global {
+ 	namespace NodeJS {

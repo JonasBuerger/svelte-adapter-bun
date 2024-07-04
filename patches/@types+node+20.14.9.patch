@@ -1,0 +1,20 @@
+diff --git a/node_modules/@types/node/module.d.ts b/node_modules/@types/node/module.d.ts
+index c38a9b8..4c4e367 100644
+--- a/node_modules/@types/node/module.d.ts
++++ b/node_modules/@types/node/module.d.ts
+@@ -280,13 +280,13 @@ declare module "module" {
+              * The directory name of the current module. This is the same as the `path.dirname()` of the `import.meta.filename`.
+              * **Caveat:** only present on `file:` modules.
+              */
+-            dirname: string;
++            readonly dirname: string;
+             /**
+              * The full absolute path and filename of the current module, with symlinks resolved.
+              * This is the same as the `url.fileURLToPath()` of the `import.meta.url`.
+              * **Caveat:** only local modules support this property. Modules not using the `file:` protocol will not provide it.
+              */
+-            filename: string;
++            readonly filename: string;
+             /**
+              * The absolute `file:` URL of the module.
+              */
