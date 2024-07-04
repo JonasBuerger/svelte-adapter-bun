@@ -15,22 +15,79 @@ import { rollup } from "rollup";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
+import { type Adapter } from "@sveltejs/kit";
+
+interface BuildOptions {
+  /**
+   * Render contextual errors? This enables bun's error page
+   * @default false
+   */
+  development?: boolean;
+  /**
+   * The default value of XFF_DEPTH if environment is not set.
+   * @default 0
+   */
+  xff_depth?: number;
+  /**
+   * Browse a static assets
+   * @default true
+   */
+  assets?: boolean;
+  /**
+   * Transpile server side code with bun transpiler for optimization for bun.
+   * @default true
+   */
+  transpileBun?: boolean;
+}
+
+interface CompressOptions {
+  /**
+   * @default false
+   */
+  gzip?: boolean;
+
+  /**
+   * @default false
+   */
+  brotli?: boolean;
+
+  /**
+   * @default ["html","js","json","css","svg","xml","wasm"]
+   */
+  files?: string[];
+}
+
+interface AdapterOptions extends BuildOptions {
+  /**
+   * The directory to build the server to. It defaults to build — i.e. node build would start the server locally after it has been created.
+   * @default "build"
+   */
+  out?: string;
+  /**
+   * Enables precompressing using gzip and brotli for assets and prerendered pages. It defaults to false.
+   * @default false
+   */
+  precompress?: boolean | CompressOptions;
+
+  /**
+   * If you need to change the name of the environment variables used to configure the deployment (for example, to deconflict with environment variables you don't control), you can specify a prefix: envPrefix: 'MY_CUSTOM_';
+   * @default ''
+   */
+  envPrefix?: string;
+}
 
 const pipe = promisify(pipeline);
-
 const files = fileURLToPath(new URL("./files", import.meta.url).href);
 
-/** @type {import('.').default} */
-export default function (opts = {}) {
-  const {
-    out = "build",
-    precompress = false,
-    envPrefix = "",
-    development = false,
-    xff_depth = 0,
-    assets = true,
-    transpileBun = true,
-  } = opts;
+export default function ({
+  out = "build",
+  precompress = false,
+  envPrefix = "",
+  development = false,
+  xff_depth = 0,
+  assets = true,
+  transpileBun = true,
+}: AdapterOptions): Adapter {
   return {
     name: "@jonasbuerger/svelte-adapter-bun",
     async adapt(builder) {
@@ -97,11 +154,10 @@ export default function (opts = {}) {
 
       builder.copy(files, out, {
         replace: {
-          SERVER: "./server/index.js",
-          MANIFEST: "./server/manifest.js",
-          ENV_PREFIX: JSON.stringify(envPrefix),
-          dotENV_PREFIX: envPrefix,
-          BUILD_OPTIONS: JSON.stringify({ development, xff_depth, assets }),
+          __SERVER: "./server/index.js",
+          __MANIFEST: "./server/manifest.js",
+          __ENV_PREFIX: JSON.stringify(envPrefix),
+          __BUILD_OPTIONS: JSON.stringify({ development, xff_depth, assets, transpileBun }),
         },
       });
 
@@ -146,16 +202,18 @@ export default function (opts = {}) {
   };
 }
 
-/**
- * @param {string} directory
- * @param {import('.').CompressOptions} options
- */
-async function compress(directory, options) {
+async function compress(directory: string, options: CompressOptions | boolean) {
   if (!existsSync(directory)) {
     return;
   }
 
-  let files_ext = options.files ?? ["html", "js", "json", "css", "svg", "xml", "wasm"];
+  const files_ext_default = ["html", "js", "json", "css", "svg", "xml", "wasm"];
+  let files_ext: string[];
+  if (typeof options == "object") {
+    files_ext = options.files ?? files_ext_default;
+  } else {
+    files_ext = files_ext_default;
+  }
   const files = await glob(`**/*.{${files_ext.join()}}`, {
     cwd: directory,
     dot: true,
@@ -180,11 +238,7 @@ async function compress(directory, options) {
   );
 }
 
-/**
- * @param {string} file
- * @param {'gz' | 'br'} format
- */
-async function compress_file(file, format = "gz") {
+async function compress_file(file: string, format: "gz" | "br" = "gz") {
   const compress =
     format === "br"
       ? zlib.createBrotliCompress({
@@ -202,10 +256,7 @@ async function compress_file(file, format = "gz") {
   await pipe(source, compress, destination);
 }
 
-/**
- * @param {string} out
- */
-function patchServerWebsocketHandler(out) {
+function patchServerWebsocketHandler(out: string) {
   let src = readFileSync(`${out}/index.js`, "utf8");
   const regex_gethook = /(this\.#options\.hooks\s+=\s+{)\s+(handle:)/gm;
   const substr_gethook = `$1 \nhandleWebsocket: module.handleWebsocket || null,\n$2`;

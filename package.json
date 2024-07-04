@@ -1,24 +1,22 @@
 {
   "name": "@jonasbuerger/svelte-adapter-bun",
-  "version": "1.1.13",
+  "version": "1.2.0",
   "description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "index.ts",
   "type": "module",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js"
+      "import": "./index.ts"
     },
     "./package.json": "./package.json"
   },
   "files": [
-    "files",
-    "index.d.ts"
+    "files"
   ],
   "scripts": {
-    "build": "rm -fr files && bun run build.js",
-    "prepare": "bun run build",
+    "build:types": "tsc -d",
+    "build": "bun build src/index.ts src/handler.ts --target=bun --format=esm --splitting --outdir=files --external=__SERVER --external=__MANIFEST",
+    "prepack": "bun run build",
     "format": "prettier --write ."
   },
   "repository": {
@@ -42,11 +40,13 @@
     "@semantic-release/github": "^10.0.7",
     "@semantic-release/npm": "^12.0.1",
     "@semantic-release/release-notes-generator": "^14.0.1",
-    "conventional-changelog-conventionalcommits": "^8.0.0",
     "@sveltejs/kit": "^1.30.4",
-    "bun-types": "latest",
+    "@types/bun": "^1.1.6",
+    "@types/node": "^20.14.9",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
     "prettier": "^3.3.2",
-    "totalist": "^3.0.1"
+    "totalist": "^3.0.1",
+    "typescript": "^5.5.3"
   },
   "dependencies": {
     "tiny-glob": "^0.2.9",

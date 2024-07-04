@@ -1,70 +1,68 @@
-import { Server } from "SERVER";
-import { manifest } from "MANIFEST";
-import { build_options, env } from "./env.js";
-import { fileURLToPath } from "bun";
+import {
+  env_prefix,
+  Server,
+  manifest,
+  development,
+  xff_depth,
+  origin,
+  address_header,
+  protocol_header,
+  host_header,
+} from "./env";
+import {
+  fileURLToPath,
+  type Server as BunServer,
+  type ServeOptions,
+  type WebSocketHandler,
+} from "bun";
 import path from "path";
-import sirv from "./sirv";
+import { default as bunsirv, type NextHandler } from "./bunsirv";
 import { existsSync } from "fs";
+import type { Server as KitServer } from "@sveltejs/kit";
 
 const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)));
-
-/** @type {import('@sveltejs/kit').Server} */
-const server = new Server(manifest);
+type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean;
+type FetchHandler = ServeOptions["fetch"];
+const server = new Server(manifest) as KitServer & {
+  websocket: () => WebSocketHandler & { upgrade?: WebSocketUpgradeHandler };
+};
 await server.init({ env: (Bun || process).env });
 
-const xff_depth = parseInt(env("XFF_DEPTH", build_options.xff_depth ?? 0));
-const origin = env("ORIGIN", undefined);
-const address_header = env("ADDRESS_HEADER", "").toLowerCase();
-const protocol_header = env("PROTOCOL_HEADER", "").toLowerCase();
-const host_header = env("HOST_HEADER", "host").toLowerCase();
-const development = env("SERVERDEV", build_options.development ?? false);
-
-/** @param {boolean} assets */
-export default function (assets) {
-  let handlers = [
+export default function (assets: boolean): { fetch: FetchHandler; websocket?: WebSocketHandler } {
+  const handlers = [
     assets && serve(path.join(__dirname, "/client"), true),
     assets && serve(path.join(__dirname, "/prerendered")),
     ssr,
   ].filter(Boolean);
-
-  /**
-   * @param {Request} req
-   * @param {import('bun').Server} srv
-   */
-  function handler(req, srv) {
-    function handle(i) {
+  const handler: FetchHandler = (request, server) => {
+    const handle = (i: number) => {
       return handlers[i](
-        req,
+        request,
         () => {
           if (i < handlers.length) {
             return handle(i + 1);
           } else {
-            return new Response(404, { status: 404 });
+            return new Response("404", { status: 404 });
           }
         },
-        srv,
+        server,
       );
-    }
+    };
     return handle(0);
-  }
+  };
 
-  /**
-   * @param {Request} request
-   * @param {import('bun').Server} server
-   * @returns
-   */
-  function defaultAcceptWebsocket(request, server) {
+  const defaultAcceptWebsocket: WebSocketUpgradeHandler = (request, server) => {
     if (development) {
       console.log("defaultAcceptWebsocket(", request.url, ")");
     }
     return server.upgrade(request);
-  }
+  };
 
   try {
     const handleWebsocket = server.websocket();
     if (handleWebsocket) {
       return {
-        httpserver: async (req, srv) => {
+        fetch: async (req, srv) => {
           if (
             req.headers.get("connection")?.toLowerCase().includes("upgrade") &&
             req.headers.get("upgrade")?.toLowerCase() === "websocket"
@@ -74,7 +72,7 @@ export default function (assets) {
               return;
             }
           }
-          return handler(req, srv);
+          return handler.bind(srv)(req, srv);
         },
         websocket: handleWebsocket,
       };
@@ -83,17 +81,17 @@ export default function (assets) {
     console.warn("Fail: websocket handler error:", e);
   }
   return {
-    httpserver: handler,
+    fetch: handler,
   };
 }
 
-function serve(path, client = false) {
+function serve(path: string, client: boolean = false) {
   if (development) {
     console.log("serve(path:", path, ", client:", client, ")");
   }
   return (
     existsSync(path) &&
-    sirv(path, {
+    bunsirv(path, {
       etag: true,
       gzip: true,
       brotli: true,
@@ -103,17 +101,12 @@ function serve(path, client = false) {
           if (pathname.startsWith(`/${manifest.appDir}/immutable/`)) {
             headers.set("cache-control", "public,max-age=31536000,immutable");
           }
-          return headers;
         }),
     })
   );
 }
 
-/**
- * @param {Request} request
- * @param {import('bun').Server} bunServer
- */
-function ssr(request, _, bunServer) {
+function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
   const clientIp = bunServer.requestIP(request)?.address;
   const url = new URL(request.url);
   let req = request;
@@ -150,7 +143,7 @@ function ssr(request, _, bunServer) {
   if (address_header && !request.headers.has(address_header)) {
     throw new Error(
       `Address header was specified with ${
-        ENV_PREFIX + "ADDRESS_HEADER"
+        env_prefix + "ADDRESS_HEADER"
       }=${address_header} but is absent from request`,
     );
   }
@@ -161,18 +154,18 @@ function ssr(request, _, bunServer) {
         console.log("getClientAddress(", req.url, ")");
       }
       if (address_header) {
-        const value = /** @type {string} */ (req.headers.get(address_header)) || "";
+        const value = /** @type {string} */ req.headers.get(address_header) || "";
 
         if (address_header === "x-forwarded-for") {
           const addresses = value.split(",");
 
           if (xff_depth < 0) {
-            throw new Error(`${ENV_PREFIX + "XFF_DEPTH"} must be a positive integer`);
+            throw new Error(`${env_prefix + "XFF_DEPTH"} must be a positive integer`);
           }
 
           if (xff_depth > addresses.length) {
             throw new Error(
-              `${ENV_PREFIX + "XFF_DEPTH"} is ${xff_depth}, but only found ${
+              `${env_prefix + "XFF_DEPTH"} is ${xff_depth}, but only found ${
                 addresses.length
               } addresses`,
             );
@@ -201,19 +194,13 @@ function ssr(request, _, bunServer) {
   });
 }
 
-/**
- * @param {string|URL} url
- * @param {Request} request
- * @returns {Request}
- */
-function clone_req(url, request) {
+function clone_req(url: string | URL, request: Request) {
   if (development) {
     console.log("Rewriting request.url", request.url, "->", url.toString());
   }
-  return new Request({
-    url,
-    method: request.method,
+  return new Request(url, {
     headers: request.headers,
+    method: request.method,
     body: request.body,
     referrer: request.referrer,
     referrerPolicy: request.referrerPolicy,

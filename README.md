@@ -108,7 +108,7 @@ The default value of XFF_DEPTH if environment is not set. Default: `0`
 https://bun.sh/docs/api/websockets
 
 ```js
-// hooks.server.js
+// hooks.server.js, hooks.server.ts
 
 /** @type {import("@jonasbuerger/svelte-adapter-bun").WebSocketHandler} */
 export const handleWebsocket = {
@@ -118,12 +118,12 @@ export const handleWebsocket = {
   },
   /**
    * @param {Request} request
-   * @param {Function} upgrade
+   * @param {Server} server
    */
   upgrade(request, upgrade) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/ws")) {
-      return upgrade(request);
+      return server.upgrade(request);
     }
   },
 };

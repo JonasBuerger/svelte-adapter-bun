@@ -1,9 +1,14 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "target": "esnext",
-    "types": ["bun-types"]
-  }
+    "types": ["bun"],
+    "declaration": true,
+    "allowSyntheticDefaultImports": true,
+    "declarationDir": "."
+  },
+  "include": ["src/*", "index.ts"],
+  "exclude": ["./node_modules/**"]
 }
