@@ -76,7 +76,6 @@ interface AdapterOptions extends BuildOptions {
   envPrefix?: string;
 }
 
-
 const pipe = promisify(pipeline);
 const files = fileURLToPath(new URL("./files", import.meta.url).href);
 
@@ -209,7 +208,7 @@ async function compress(directory: string, options: CompressOptions | boolean) {
   }
 
   const files_ext_default = ["html", "js", "json", "css", "svg", "xml", "wasm"];
-  let files_ext: string[] = [];
+  let files_ext: string[];
   if (typeof options == "object") {
     files_ext = options.files ?? files_ext_default;
   } else {
@@ -239,7 +238,7 @@ async function compress(directory: string, options: CompressOptions | boolean) {
   );
 }
 
-async function compress_file(file: string, format: 'gz' | 'br' = "gz") {
+async function compress_file(file: string, format: "gz" | "br" = "gz") {
   const compress =
     format === "br"
       ? zlib.createBrotliCompress({

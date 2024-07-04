@@ -1,13 +1,19 @@
-// @ts-ignore
-import { Server } from "__SERVER";
-// @ts-ignore
-import { manifest } from "__MANIFEST";
-import { build_options, env, env_prefix } from "./env";
+import {
+  env_prefix,
+  Server,
+  manifest,
+  development,
+  xff_depth,
+  origin,
+  address_header,
+  protocol_header,
+  host_header,
+} from "./env";
 import {
   fileURLToPath,
   type Server as BunServer,
   type ServeOptions,
-  type WebSocketHandler
+  type WebSocketHandler,
 } from "bun";
 import path from "path";
 import { default as bunsirv, type NextHandler } from "./bunsirv";
@@ -15,19 +21,14 @@ import { existsSync } from "fs";
 import type { Server as KitServer } from "@sveltejs/kit";
 
 const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)));
-type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean
-type FetchHandler = ServeOptions['fetch']
-const server = new Server(manifest) as KitServer & { websocket: () => WebSocketHandler & { upgrade?: WebSocketUpgradeHandler} };
+type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean;
+type FetchHandler = ServeOptions["fetch"];
+const server = new Server(manifest) as KitServer & {
+  websocket: () => WebSocketHandler & { upgrade?: WebSocketUpgradeHandler };
+};
 await server.init({ env: (Bun || process).env });
 
-const xff_depth: number = parseInt(env("XFF_DEPTH", build_options.xff_depth ?? 0));
-const origin : string | undefined = env("ORIGIN", undefined);
-const address_header : string = env("ADDRESS_HEADER", "").toLowerCase();
-const protocol_header : string = env("PROTOCOL_HEADER", "").toLowerCase();
-const host_header : string = env("HOST_HEADER", "host").toLowerCase();
-const development : boolean = !!env("SERVERDEV", build_options.development ?? false);
-
-export default function (assets: boolean): { fetch: FetchHandler, websocket?: WebSocketHandler } {
+export default function (assets: boolean): { fetch: FetchHandler; websocket?: WebSocketHandler } {
   const handlers = [
     assets && serve(path.join(__dirname, "/client"), true),
     assets && serve(path.join(__dirname, "/prerendered")),
@@ -46,9 +47,9 @@ export default function (assets: boolean): { fetch: FetchHandler, websocket?: We
         },
         server,
       );
-    }
+    };
     return handle(0);
-  }
+  };
 
   const defaultAcceptWebsocket: WebSocketUpgradeHandler = (request, server) => {
     if (development) {
@@ -84,24 +85,25 @@ export default function (assets: boolean): { fetch: FetchHandler, websocket?: We
   };
 }
 
-function serve(path: string, client:boolean = false) {
+function serve(path: string, client: boolean = false) {
   if (development) {
     console.log("serve(path:", path, ", client:", client, ")");
   }
-  return existsSync(path) &&
+  return (
+    existsSync(path) &&
     bunsirv(path, {
       etag: true,
       gzip: true,
       brotli: true,
       setHeaders:
         client &&
-        (( headers, pathname) => {
+        ((headers, pathname) => {
           if (pathname.startsWith(`/${manifest.appDir}/immutable/`)) {
             headers.set("cache-control", "public,max-age=31536000,immutable");
           }
         }),
     })
-
+  );
 }
 
 function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
@@ -152,7 +154,7 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
         console.log("getClientAddress(", req.url, ")");
       }
       if (address_header) {
-        const value = /** @type {string} */ (req.headers.get(address_header)) || "";
+        const value = /** @type {string} */ req.headers.get(address_header) || "";
 
         if (address_header === "x-forwarded-for") {
           const addresses = value.split(",");
@@ -206,6 +208,6 @@ function clone_req(url: string | URL, request: Request) {
     credentials: request.credentials,
     cache: request.cache,
     redirect: request.redirect,
-    integrity: request.integrity
+    integrity: request.integrity,
   });
 }

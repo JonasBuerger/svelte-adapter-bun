@@ -1,11 +1,7 @@
 /*! MIT © Volodymyr Palamar https://github.com/gornostay25/svelte-adapter-bun */
 import { serve, type Serve } from "bun";
-import { build_options, env } from "./env";
+import { build_options, hostname, port, development } from "./env";
 import handler from "./handler";
-
-const hostname: string = env("HOST", "0.0.0.0");
-const port: number = parseInt(env("PORT", 3000));
-const development: boolean = env("SERVERDEV", build_options.development ?? false);
 
 const { fetch, websocket } = handler(build_options.assets ?? true);
 
@@ -19,7 +15,7 @@ const serverOptions: Serve = {
     console.error(error);
     return new Response("Uh oh!!", { status: 500 });
   },
-  websocket
+  websocket,
 };
 
 const server = serve(serverOptions);

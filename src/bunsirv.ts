@@ -5,10 +5,13 @@ import { totalist } from "totalist/sync";
 
 type Arrayable<T> = T | T[];
 export type NextHandler = () => void | Promise<void>;
-export type RequestHandler = (req: Request, next?: NextHandler) => void | Response | Promise<void | Response>;
+export type RequestHandler = (
+  req: Request,
+  next?: NextHandler,
+) => void | Response | Promise<void | Response>;
 
-type SirvFile = {filepath: string, stats:Stats, headers:Headers}
-type SirvFilesGetter = (uri: string, extns: string[]) => SirvFile
+type SirvFile = { filepath: string; stats: Stats; headers: Headers };
+type SirvFilesGetter = (uri: string, extns: string[]) => SirvFile;
 
 interface Options {
   dev?: boolean;
@@ -27,7 +30,7 @@ interface Options {
 
 function toAssume(uri: string, extns: string[]): string[] {
   let i = 0,
-    x,
+    x: string,
     len = uri.length - 1;
   if (uri.charCodeAt(len) === 47) {
     uri = uri.substring(0, len);
@@ -44,19 +47,19 @@ function toAssume(uri: string, extns: string[]): string[] {
   return arr;
 }
 
-function viaCache(cache: Record<string, SirvFile>, uri: string, extns: string[]): SirvFile {
+function viaCache(cache: Record<string, SirvFile>, uri: string, extns: string[]): SirvFile | void {
   let i = 0,
-    data,
+    data: SirvFile,
     arr = toAssume(uri, extns);
   for (; i < arr.length; i++) {
     if ((data = cache[arr[i]])) return data;
   }
 }
 
-function viaLocal(dir: string, isEtag: boolean, uri: string, extns: string[]): SirvFile {
+function viaLocal(dir: string, isEtag: boolean, uri: string, extns: string[]): SirvFile | void {
   let i = 0,
     arr = toAssume(uri, extns);
-  let filepath, stats, name, headers;
+  let filepath: string, stats: Stats, name: string, headers: Headers;
   for (; i < arr.length; i++) {
     filepath = normalize(join(dir, (name = arr[i])));
     if (filepath.startsWith(dir) && existsSync(filepath)) {
@@ -69,16 +72,16 @@ function viaLocal(dir: string, isEtag: boolean, uri: string, extns: string[]): S
   }
 }
 
-const is404 : RequestHandler = () => {
+const is404: RequestHandler = () => {
   return new Response(null, {
     status: 404,
     statusText: "404 Not Found",
   });
-}
+};
 
 function send(req: Request, filepath: string, stats: Stats, headers: Headers): Response {
   let code = 200,
-    opts: {end?: number, start?: number, range?: boolean} = {};
+    opts: { end?: number; start?: number; range?: boolean } = {};
 
   if (req.headers.has("range")) {
     code = 206;
@@ -164,7 +167,7 @@ export default function (dir: string, opts: Options = {}): RequestHandler {
 
   let ignores = [];
   if (opts.ignores !== false) {
-    ignores.push(/[/]([A-Za-z\s\d~$._-]+\.\w+){1,}$/); // any extn
+    ignores.push(/\/([A-Za-z\s\d~$._-]+\.\w+)+$/); // any extn
     if (opts.dotfiles) ignores.push(/\/\.\w/);
     else ignores.push(/\/\.well-known/);
     [].concat(opts.ignores || []).forEach(x => {
@@ -180,7 +183,7 @@ export default function (dir: string, opts: Options = {}): RequestHandler {
     totalist(dir, (name, filepath, stats) => {
       if (/\.well-known[\\+\/]/.test(name)) {
       } // keep
-      else if (!opts.dotfiles && /(^\.|[\\+|\/+]\.)/.test(name)) return;
+      else if (!opts.dotfiles && /(^\.|[\\+|\/]\.)/.test(name)) return;
 
       let headers = toHeaders(name, stats, isEtag);
       if (cc) headers.set("Cache-Control", cc);
@@ -191,9 +194,6 @@ export default function (dir: string, opts: Options = {}): RequestHandler {
 
   let lookup: SirvFilesGetter = opts.dev ? viaLocal.bind(0, dir, isEtag) : viaCache.bind(0, FILES);
 
-  /**
-   * @param {Request} req
-   */
   return function (req, next) {
     let extns = [""];
     let pathname = new URL(req.url).pathname;
@@ -210,13 +210,18 @@ export default function (dir: string, opts: Options = {}): RequestHandler {
       }
     }
 
-    let { filepath = '', stats = undefined, headers = undefined } = lookup(pathname, extns);
-    if (!filepath) return next ? next() : isNotFound(req , next);
+    const sirvFile = lookup(pathname, extns);
+    if (opts.dev) {
+      console.info("Bunsirv Lookup:", sirvFile ? sirvFile.filepath : sirvFile);
+    }
+    if (!sirvFile) return next ? next() : isNotFound(req, next);
+
+    let { filepath = "", stats = undefined, headers = undefined } = sirvFile;
 
     if (isEtag && req.headers.get("if-none-match") === headers.get("ETag")) {
       return new Response(null, { status: 304 });
     }
-    headers = new Headers(headers)
+    headers = new Headers(headers);
 
     if (gzips || brots) {
       headers.append("Vary", "Accept-Encoding");
