@@ -93,8 +93,15 @@ For example, to deconflict with environment variables you don't control:
 
 ```js
 // svelte.config.js
-envPrefix: "MY_CUSTOM_"
+export default {
+  kit: {
+    adapter: adapter({
+      envPrefix: "MY_CUSTOM_",
+    }),
+  },
+};
 ```
+
 ```dotenv
 #.env
 MY_CUSTOM_HOST="127.0.0.1"
@@ -142,7 +149,7 @@ export const handleWebsocket = {
 
 ## :desktop_computer: Environment variables
 
-> Bun [automatically reads configuration](https://bun.sh/docs/runtime/env) from `.env.local`, `.env.development`, `.env.production` and `.env` 
+> Bun [automatically reads configuration](https://bun.sh/docs/runtime/env) from `.env.local`, `.env.development`, `.env.production` and `.env`
 
 ### `PORT` and `HOST`
 
@@ -153,6 +160,7 @@ HOST=127.0.0.1 PORT=4000 bun build/index.js
 ```
 
 ### `ORIGIN`, `PROTOCOL_HEADER` and `HOST_HEADER`
+
 [SvelteKit Dokumentation](https://kit.svelte.dev/docs/adapter-node#environment-variables-origin-protocolheader-hostheader-and-port-header)
 
 HTTP doesn't give SvelteKit a reliable way to know the URL that is currently being requested. The simplest way to tell SvelteKit where the app is being served is to set the `ORIGIN` environment variable:
@@ -170,6 +178,7 @@ PROTOCOL_HEADER=x-forwarded-proto HOST_HEADER=x-forwarded-host bun build/index.j
 > [`x-forwarded-proto`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto) and [`x-forwarded-host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) are de facto standard headers that forward the original protocol and host if you're using a reverse proxy (think load balancers and CDNs). You should only set these variables if your server is behind a trusted reverse proxy; otherwise, it'd be possible for clients to spoof these headers.
 
 ### `ADDRESS_HEADER` and `XFF_DEPTH`
+
 [SvelteKit Dokumentation](https://kit.svelte.dev/docs/adapter-node#environment-variables-addressheader-and-xffdepth)
 
 The [RequestEvent](https://kit.svelte.dev/docs/types#additional-types-requestevent) object passed to hooks and endpoints includes an `event.clientAddress` property representing the client's IP address. If your server is behind one or more proxies (such as a load balancer), you can get an IP address from headers, so we need to specify an `ADDRESS_HEADER` to read the address from:
