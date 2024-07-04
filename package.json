@@ -1,6 +1,6 @@
 {
   "name": "@jonasbuerger/svelte-adapter-bun",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
   "main": "index",
   "types": "index",
@@ -57,7 +57,6 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
-    "tiny-glob": "^0.2.9",
     "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^15.2.3",

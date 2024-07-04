@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "fs";
 import { pipeline } from "stream";
-import glob from "tiny-glob";
+import { Glob } from "bun";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
 import zlib from "zlib";
@@ -163,9 +163,9 @@ export default function ({
       });
 
       if (transpileBun) {
-        const files = await glob("./server/**/*.js", { cwd: out, absolute: true });
+        const glob = new Glob("./server/**/*.js");
         const transpiler = new Bun.Transpiler({ loader: "js" });
-        for (const file of files) {
+        for await (const file of glob.scan({ cwd: out, absolute: true })) {
           const src = await Bun.file(file).text();
           if (src.startsWith("// @bun")) continue;
           await Bun.write(file, "// @bun\n" + transpiler.transformSync(src));
@@ -215,12 +215,15 @@ async function compress(directory: string, options: CompressOptions | boolean) {
   } else {
     files_ext = files_ext_default;
   }
-  const files = await glob(`**/*.{${files_ext.join()}}`, {
-    cwd: directory,
-    dot: true,
-    absolute: true,
-    filesOnly: true,
-  });
+  const glob = new Glob(`**/*.{${files_ext.join()}}`);
+  const files = Array.from(
+    glob.scanSync({
+      cwd: directory,
+      dot: true,
+      absolute: true,
+      onlyFiles: true,
+    }),
+  );
 
   let doBr = false,
     doGz = false;
