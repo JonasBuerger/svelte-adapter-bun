@@ -89,15 +89,14 @@ File extensions to compress.
 ### envPrefix
 
 If you need to change the name of the environment variables used to configure the deployment.
-For example, to deconflict with environment variables you don't control.
-
-Example
+For example, to deconflict with environment variables you don't control:
 
 ```js
 // svelte.config.js
 envPrefix: "MY_CUSTOM_"
 ```
 ```dotenv
+#.env
 MY_CUSTOM_HOST="127.0.0.1"
 MY_CUSTOM_PORT=4000
 MY_CUSTOM_ORIGIN="https://my.site"
