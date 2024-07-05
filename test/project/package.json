@@ -1,19 +1,18 @@
 {
   "name": "test-project",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "build": "bunx --bun vite build",
-    "test": "bunx --bun playwright test"
+    "test": "bunx --bun playwright test",
+    "preview": "bunx --bun vite preview"
   },
   "devDependencies": {
-    "@jonasbuerger/svelte-adapter-bun": "file://adapter.tgz",
+    "@jonasbuerger/svelte-adapter-bun": "jonasbuerger-svelte-adapter-bun-2.0.4.tgz",
     "@playwright/test": "^1.45.1",
     "@sveltejs/kit": "^2.5.18",
     "@sveltejs/vite-plugin-svelte": "^3.1.1",
     "svelte": "^4.2.18",
-    "svelte-check": "^3.8.4",
-    "tslib": "^2.6.3",
     "typescript": "^5.5.3",
     "vite": "^5.3.3"
   },

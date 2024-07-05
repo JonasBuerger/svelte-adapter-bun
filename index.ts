@@ -88,7 +88,7 @@ export default function ({
   xff_depth = 0,
   assets = true,
   transpileBun = true,
-}: AdapterOptions): Adapter {
+}: AdapterOptions = {}): Adapter {
   return {
     name: "@jonasbuerger/svelte-adapter-bun",
     async adapt(builder) {

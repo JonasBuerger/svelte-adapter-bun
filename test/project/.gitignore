@@ -1,5 +1,11 @@
 # Output
 /build
 
-# Adapter
-adapter.tgz
+# Packed adapter
+*.tgz
+
+# Lockfile
+*.lockb
+*.lock
+*-lock.json
+*-lock.yaml

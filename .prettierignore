@@ -6,6 +6,12 @@ node_modules
 .env.*
 !.env.example
 examples/**
+build
+/src/*.js
+/src/*.d.ts
+/index.js
+/index.d.ts
+.svelte-kit
 
 # Ignore files for PNPM, NPM and YARN
 pnpm-lock.yaml

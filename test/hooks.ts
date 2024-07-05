@@ -1,18 +1,16 @@
 import { beforeAll, afterAll } from "bun:test";
 import { execSync } from "node:child_process";
-import { Glob } from "bun";
+let packName = "";
 
 beforeAll(() => {
   // global setup
-  execSync("npm pack");
-  const glob = new Glob("jonasbuerger-svelte-adapter-bun-*.*.*.tgz");
-  for (const name of glob.scanSync()) {
-    execSync(`mv ${name} ./test/project/adapter.tgz`);
-  }
-  execSync("cd ./test/project && bun install");
-  execSync("ls");
+  const packOut = execSync("npm pack --pack-destination ./test/project").toString().split("\n");
+  packName = packOut.at(packOut.length - 2);
+  execSync("cd ./test/project && bun remove @jonasbuerger/svelte-adapter-bun");
+  execSync(`cd ./test/project && bun add -d "${packName}"`);
+  execSync("cd ./test/project && bun run build");
 });
 
 afterAll(() => {
-  // global teardown
+  execSync(`rm -f ./test/project/"${packName}"`);
 });

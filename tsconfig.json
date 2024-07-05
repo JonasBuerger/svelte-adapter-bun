@@ -7,7 +7,7 @@
     "types": ["bun"],
     "declaration": true,
     "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
     "declarationDir": "."
   },
   "include": ["src/*", "index.ts"],
