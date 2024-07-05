@@ -1,8 +1,9 @@
 import { expect, test, describe, beforeAll, afterAll } from "bun:test";
 import { serve, spawn, spawnSync, type Subprocess } from "bun";
 const hostMap = new Map([["/test-project", "localhost:7001"]]);
-const hostname = "localhost:7000";
-const protocol = "http";
+const proxy_hostname = "localhost:7000";
+const proxy_protocol = "http";
+const origin = `${proxy_protocol}://${proxy_hostname}`;
 const fetch_handler = async (request: Request) => {
   const requestUrl = new URL(request.url);
   let matched = false;
@@ -19,10 +20,10 @@ const fetch_handler = async (request: Request) => {
   }
 
   const proxyRequest = new Request(requestUrl, request);
-  proxyRequest.headers.set("X-Forwarded-Proto", protocol);
-  proxyRequest.headers.set("X-Forwarded-Host", hostname);
+  proxyRequest.headers.set("X-Forwarded-Proto", proxy_protocol);
+  proxyRequest.headers.set("X-Forwarded-Host", proxy_hostname);
   proxyRequest.headers.set("X-Forwarded-For", "8.8.8.8");
-  proxyRequest.headers.set("Origin", `${protocol}://${hostname}`);
+  proxyRequest.headers.set("Origin", origin);
   console.info("Proxy received:", request.url);
   console.info("Proxied to:", proxyRequest.url);
   return fetch(proxyRequest, { redirect: "manual" });
@@ -69,13 +70,17 @@ describe("test project", () => {
   afterAll(async () => {
     app_server.kill();
     proxy_server.stop();
-    await spawn({
+    spawn({
       cmd: ["rm", "-f", adapter_pack_name, "bun.lockb"],
       cwd: process.cwd() + "/test/project",
-    }).exited;
+    });
+    spawn({
+      cmd: ["rm", "-rf", "build", ".svelte-kit"],
+      cwd: process.cwd() + "/test/project",
+    });
   });
   test("static file", async () => {
-    const response = fetch(`${protocol}://${hostname}/test-project/hello.html`)
+    const response = fetch(origin + "/test-project/hello.html")
       .then(res => {
         expect(res.ok).toBeTrue();
         return res;
