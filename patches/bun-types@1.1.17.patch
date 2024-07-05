@@ -1,0 +1,28 @@
+diff --git a/globals.d.ts b/globals.d.ts
+index 8ec9303ff6a89395d911661c0825ff7bb89968f2..5fedcef7cf0e35ee8814f21a00c463f827a5edda 100644
+--- a/globals.d.ts
++++ b/globals.d.ts
+@@ -148,7 +148,6 @@ import type { WebSocket as _WebSocket } from "ws";
+ 
+ declare module "*.txt" {
+ 	var text: string;
+-  // @ts-ignore
+ 	export = text;
+ }
+ 
+@@ -1850,7 +1849,6 @@ declare global {
+ 		 * import.meta.env === process.env
+ 		 * ```
+ 		 */
+-		// @ts-ignore
+ 		readonly env: NodeJS.ProcessEnv;
+ 
+ 		/**
+@@ -1903,6 +1901,7 @@ declare global {
+ 	 *
+ 	 * @param moduleId - The module ID to resolve
+ 	 */
++	// @ts-ignore
+ 	var require: NodeJS.Require;
+ 
+ 	/** Same as module.exports */

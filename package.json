@@ -49,12 +49,12 @@
     "@semantic-release/npm": "^12.0.1",
     "@semantic-release/release-notes-generator": "^14.0.1",
     "@sveltejs/kit": "^1.30.4",
-    "@types/bun": "^1.1.6",
-    "@types/node": "^20.14.9",
+    "bun-types": "1.1.17",
     "conventional-changelog-conventionalcommits": "^8.0.0",
     "prettier": "^3.3.2",
     "totalist": "^3.0.1",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3"
   },
   "dependencies": {
     "@rollup/plugin-commonjs": "^26.0.1",
@@ -69,5 +69,8 @@
     "registry": "https://registry.npmjs.org/",
     "tag": "latest",
     "access": "public"
+  },
+  "patchedDependencies": {
+    "bun-types@1.1.17": "patches/bun-types@1.1.17.patch"
   }
 }
