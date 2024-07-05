@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "bunx --bun vite build",
-    "test": "bunx --bun playwright test",
-    "preview": "bunx --bun vite preview"
+    "build": "bun x --bun vite build",
+    "test": "bun x --bun playwright test",
+    "preview": "bun x --bun vite preview"
   },
   "devDependencies": {
     "@jonasbuerger/svelte-adapter-bun": "jonasbuerger-svelte-adapter-bun-2.0.4.tgz",
