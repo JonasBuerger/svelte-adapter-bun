@@ -8,28 +8,15 @@ let adapter_pack_name: string;
 
 describe("test project", () => {
   beforeAll(async () => {
-    adapter_pack_name =
-      "jonasbuerger-svelte-adapter-bun-" +
-      spawnSync(["bun", "x", "semantic-release", "--version"]).stdout.toString().replace("\n", "") +
-      ".tgz";
-    await spawn({
-      cmd: ["npm", "pack", "--pack-destination", "./test/project"],
-    }).exited;
-    await spawn({
-      cmd: ["bun", "remove", "@jonasbuerger/svelte-adapter-bun"],
-      cwd: process.cwd() + "/test/project",
-    }).exited;
-    await spawn({
-      cmd: ["bun", "add", "-d", adapter_pack_name],
-      cwd: process.cwd() + "/test/project",
-    }).exited;
     await spawn({
       cmd: ["bun", "install"],
       cwd: process.cwd() + "/test/project",
+      stdout: null,
     }).exited;
     await spawn({
       cmd: ["bun", "run", "build"],
       cwd: process.cwd() + "/test/project",
+      stdout: null,
     }).exited;
     app_server = spawn({
       cmd: ["bun", "./build/index.js"],
@@ -47,17 +34,13 @@ describe("test project", () => {
     app_server.kill();
     proxy_server.stop(true);
     spawn({
-      cmd: ["rm", "-f", adapter_pack_name, "bun.lockb"],
+      cmd: ["rm", "-f", "bun.lockb"],
       cwd: process.cwd() + "/test/project",
     });
     spawn({
       cmd: ["rm", "-rf", "build", ".svelte-kit"],
       cwd: process.cwd() + "/test/project",
     });
-    await spawn({
-      cmd: ["bun", "remove", "@jonasbuerger/svelte-adapter-bun"],
-      cwd: process.cwd() + "/test/project",
-    }).exited;
   });
 
   test("static file direct", async () => {

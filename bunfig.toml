@@ -1,2 +1,2 @@
 [test]
-preload = ["./test/hooks.ts"]
+preload = ["./test/lifecycle.hooks.ts"]
