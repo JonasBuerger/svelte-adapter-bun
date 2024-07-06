@@ -1,34 +1,8 @@
 import { expect, test, describe, beforeAll, afterAll } from "bun:test";
-import { serve, spawn, spawnSync, type Subprocess } from "bun";
-const hostMap = new Map([["/test-project", "localhost:7001"]]);
-const proxy_hostname = "localhost:7000";
-const proxy_protocol = "http";
-const origin = `${proxy_protocol}://${proxy_hostname}`;
-const fetch_handler = async (request: Request) => {
-  const requestUrl = new URL(request.url);
-  let matched = false;
-  hostMap.forEach((host, proxyPath) => {
-    if (requestUrl.pathname.startsWith(proxyPath)) {
-      requestUrl.host = host;
-      requestUrl.pathname = requestUrl.pathname.replace(new RegExp(`^${proxyPath}`), "");
-      matched = true;
-    }
-  }, requestUrl);
-
-  if (!matched) {
-    return new Response("Not Found", { status: 404 });
-  }
-
-  const proxyRequest = new Request(requestUrl, request);
-  proxyRequest.headers.set("X-Forwarded-Proto", proxy_protocol);
-  proxyRequest.headers.set("X-Forwarded-Host", proxy_hostname);
-  proxyRequest.headers.set("X-Forwarded-For", "8.8.8.8");
-  proxyRequest.headers.set("Origin", origin);
-  console.info("Proxy received:", request.url);
-  console.info("Proxied to:", proxyRequest.url);
-  return fetch(proxyRequest, { redirect: "manual" });
-};
-const proxy_server = serve({ port: 7000, fetch: fetch_handler });
+import { type Server, sleep, spawn, spawnSync, type Subprocess } from "bun";
+import { proxy } from "./helper";
+const proxy_map = new Map([["/test-project", "localhost:7001"]]);
+let proxy_server: Server;
 let app_server: Subprocess<"ignore", "pipe", "inherit">;
 let adapter_pack_name: string;
 
@@ -50,26 +24,28 @@ describe("test project", () => {
       cwd: process.cwd() + "/test/project",
     }).exited;
     await spawn({
+      cmd: ["bun", "install"],
+      cwd: process.cwd() + "/test/project",
+    }).exited;
+    await spawn({
       cmd: ["bun", "run", "build"],
       cwd: process.cwd() + "/test/project",
     }).exited;
-
     app_server = spawn({
-      cmd: ["bun", "run", "preview"],
+      cmd: ["bun", "./build/index.js"],
       cwd: process.cwd() + "/test/project",
       env: {
         HOST: "localhost",
         PORT: "7001",
       },
     });
-    const decoder = new TextDecoder();
-    for await (const chunk of app_server.stdout) {
-      console.log(decoder.decode(chunk));
-    }
+    proxy_server = proxy({ proxy_map });
+    await sleep(2000);
   });
+
   afterAll(async () => {
     app_server.kill();
-    proxy_server.stop();
+    proxy_server.stop(true);
     spawn({
       cmd: ["rm", "-f", adapter_pack_name, "bun.lockb"],
       cwd: process.cwd() + "/test/project",
@@ -78,9 +54,25 @@ describe("test project", () => {
       cmd: ["rm", "-rf", "build", ".svelte-kit"],
       cwd: process.cwd() + "/test/project",
     });
+    await spawn({
+      cmd: ["bun", "remove", "@jonasbuerger/svelte-adapter-bun"],
+      cwd: process.cwd() + "/test/project",
+    }).exited;
   });
-  test("static file", async () => {
-    const response = fetch(origin + "/test-project/hello.html")
+
+  test("static file direct", async () => {
+    const response = fetch("http://localhost:7001/hello.html")
+      .then(res => {
+        expect(res.ok).toBeTrue();
+        return res;
+      })
+      .then(res => res.text())
+      .catch(e => console.error(e));
+    expect(response).resolves.toEqual("static hello\n");
+  }, 100);
+
+  test("static file proxy", async () => {
+    const response = fetch(proxy_server.url.origin + "/test-project/hello.html")
       .then(res => {
         expect(res.ok).toBeTrue();
         return res;
