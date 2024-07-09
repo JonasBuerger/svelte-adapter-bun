@@ -4,11 +4,11 @@ const proxy_map = new Map([["/test-project", "localhost:7001"]]);
 
 describe("test project", () => {
   beforeAll(async () => {
-    return Promise.all([proxy.setup({ proxy_map }), test_project.setup()]);
+    return await Promise.all([proxy.setup({ proxy_map }), test_project.setup()]);
   });
 
   afterAll(async () => {
-    return Promise.all([proxy.teardown(), test_project.teardown()]);
+    return await Promise.all([proxy.teardown(), test_project.teardown()]);
   });
 
   test("static file direct", async () => {

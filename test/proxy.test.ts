@@ -10,25 +10,23 @@ let app_server1: Server;
 let app_server2: Server;
 
 describe("mock proxy for tests", () => {
-  beforeAll(() => {
-    proxy.setup({ proxy_map });
+  beforeAll(async () => {
+    await proxy.setup({ proxy_map });
     app_server1 = serve({
       port: 7001,
       async fetch() {
-        console.info("App Server 1");
         return new Response("This is service 1!");
       },
     });
     app_server2 = serve({
       port: 7002,
       async fetch() {
-        console.info("App Server 2");
         return new Response("This is service 2!");
       },
     });
   });
-  afterAll(() => {
-    proxy.teardown();
+  afterAll(async () => {
+    await proxy.teardown();
     app_server1.stop(true);
     app_server2.stop(true);
   });

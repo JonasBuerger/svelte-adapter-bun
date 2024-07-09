@@ -1,6 +1,6 @@
 {
   "name": "@jonasbuerger/svelte-adapter-bun",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "Adapter for SvelteKit apps that generates a standalone Bun.js server.",
   "main": "index",
   "types": "index",
