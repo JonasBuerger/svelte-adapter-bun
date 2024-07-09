@@ -57,7 +57,7 @@ export const test_project: {
       stdout: null,
     }).exited;
     await spawn({
-      cmd: ["bun", "run", "build"],
+      cmd: ["bun", "x", "--bun", "vite", "build"],
       cwd: process.cwd() + "/test/project",
       stdout: null,
     }).exited;
