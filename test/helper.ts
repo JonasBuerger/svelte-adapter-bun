@@ -54,22 +54,12 @@ export const test_project: {
     await spawn({
       cmd: ["bun", "install"],
       cwd: process.cwd() + "/test/project",
-      stdout: "inherit",
+      stdout: null,
     }).exited;
     await spawn({
       cmd: ["bun", "x", "--bun", "vite", "build"],
       cwd: process.cwd() + "/test/project",
-      stdout: "inherit",
-    }).exited;
-    await spawn({
-      cmd: ["ls", "-la"],
-      cwd: process.cwd() + "/test/project",
-      stdout: "inherit",
-    }).exited;
-    await spawn({
-      cmd: ["ls", "-la"],
-      cwd: process.cwd() + "/test/project/build",
-      stdout: "inherit",
+      stdout: null,
     }).exited;
     this.server = spawn({
       cmd: ["bun", "./build/index.js"],
