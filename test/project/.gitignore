@@ -1,0 +1,12 @@
+# Output
+/build
+/test-results
+
+# Packed adapter
+*.tgz
+
+# Lockfile
+*.lockb
+*.lock
+*-lock.json
+*-lock.yaml
