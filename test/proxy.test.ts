@@ -6,13 +6,12 @@ const proxy_map = new Map([
   ["/service1", "localhost:7001"],
   ["/service2", "localhost:7002"],
 ]);
-let proxy_server: Server;
 let app_server1: Server;
 let app_server2: Server;
 
-describe("reachable", () => {
+describe("mock proxy for tests", () => {
   beforeAll(() => {
-    proxy_server = proxy({ proxy_map });
+    proxy.setup({ proxy_map });
     app_server1 = serve({
       port: 7001,
       async fetch() {
@@ -29,7 +28,7 @@ describe("reachable", () => {
     });
   });
   afterAll(() => {
-    proxy_server.stop(true);
+    proxy.teardown();
     app_server1.stop(true);
     app_server2.stop(true);
   });
@@ -54,7 +53,7 @@ describe("reachable", () => {
     expect(response).resolves.toEqual("This is service 2!");
   }, 100);
   test("service 1 proxy", async () => {
-    const response = fetch(proxy_server.url.origin + "/service1")
+    const response = fetch(proxy.server.url.origin + "/service1")
       .then(res => {
         expect(res.ok).toBeTrue();
         return res;
@@ -64,7 +63,7 @@ describe("reachable", () => {
     expect(response).resolves.toEqual("This is service 1!");
   }, 100);
   test("service 2 proxy", async () => {
-    const response = fetch(proxy_server.url.origin + "/service2")
+    const response = fetch(proxy.server.url.origin + "/service2")
       .then(res => {
         expect(res.ok).toBeTrue();
         return res;

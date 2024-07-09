@@ -57,7 +57,7 @@ export default function (assets: boolean): {
 
   const defaultAcceptWebsocket: WebSocketUpgradeHandler = (request, server) => {
     if (development) {
-      console.log("defaultAcceptWebsocket(", request.url, ")");
+      console.info("Upgrading websocket request on:", request.url);
     }
     return server.upgrade(request);
   };
@@ -91,7 +91,7 @@ export default function (assets: boolean): {
 
 function serve(path: string, client: boolean = false) {
   if (development) {
-    console.log("serve(path:", path, ", client:", client, ")");
+    console.info("serve(path:", path, ", client:", client, ")");
   }
   return (
     existsSync(path) &&
@@ -116,12 +116,12 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
   let req = request;
 
   if (development) {
-    console.log("ssr(", url.toString(), ",", clientIp, ")");
+    console.info("ssr(", url.toString(), ",", clientIp, ")");
   }
 
   if (origin) {
     if (development) {
-      console.log("Handling origin header");
+      console.info("Handling origin header");
     }
     const new_url = new URL(origin);
     new_url.pathname = url.pathname;
@@ -133,7 +133,7 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
     (protocol_header && url.protocol !== request.headers.get(protocol_header) + ":")
   ) {
     if (development) {
-      console.log("Handling x-forwarded-* header:", host_header, protocol_header);
+      console.info("Handling x-forwarded-* header:", host_header, protocol_header);
     }
     if (host_header) {
       url.host = request.headers.get(host_header);
@@ -155,7 +155,7 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
   return server.respond(req, {
     getClientAddress() {
       if (development) {
-        console.log("getClientAddress(", req.url, ")");
+        console.info("getClientAddress(", req.url, ")");
       }
       if (address_header) {
         const value = /** @type {string} */ req.headers.get(address_header) || "";
@@ -200,7 +200,7 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
 
 function clone_req(url: string | URL, request: Request) {
   if (development) {
-    console.log("Rewriting request.url", request.url, "->", url.toString());
+    console.info("Rewriting request.url", request.url, "->", url.toString());
   }
   return new Request(url, {
     headers: request.headers,

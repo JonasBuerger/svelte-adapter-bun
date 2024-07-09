@@ -26,7 +26,7 @@ if (development) {
 
 const cleanup = () => {
   if (development) {
-    console.log("Stop signal received, closing server");
+    console.info("Stop signal received, closing server");
   }
   server.stop(true);
   process.exit(0);
