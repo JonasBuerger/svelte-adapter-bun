@@ -25,13 +25,11 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Run tests
         run: bun test
-      - name: Echo
-        run: echo "${{ github.base_ref }}"
   release:
     name: Release
     runs-on: ubuntu-latest
     needs: test
-    if: ${{ github.base_ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     permissions:
       contents: write # to be able to publish a GitHub release
       issues: write # to be able to comment on released issues
