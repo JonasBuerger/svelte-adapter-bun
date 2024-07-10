@@ -1,6 +1,6 @@
 # @jonasbuerger/svelte-adapter-bun
 
-![Release CI](https://github.com/jonasbuerger/svelte-adapter-bun/actions/workflows/release.yml/badge.svg)
+[![Release](https://github.com/JonasBuerger/svelte-adapter-bun/actions/workflows/release.yml/badge.svg)](https://github.com/JonasBuerger/svelte-adapter-bun/actions/workflows/release.yml)
 
 [Adapter](https://kit.svelte.dev/docs/adapters) for SvelteKit apps that generates a standalone [Bun](https://github.com/oven-sh/bun) server.
 

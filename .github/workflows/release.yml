@@ -25,6 +25,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Run tests
         run: bun test
+      - name: Echo
+        run: echo "${{ github.base_ref }}"
   release:
     name: Release
     runs-on: ubuntu-latest
