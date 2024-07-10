@@ -4,6 +4,7 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "target": "esnext",
+    "types": ["@types/bun"],
     "declaration": true,
     "allowSyntheticDefaultImports": true,
     "skipDefaultLibCheck": true,
