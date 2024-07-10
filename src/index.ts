@@ -1,12 +1,12 @@
 /*! MIT © Volodymyr Palamar https://github.com/gornostay25/svelte-adapter-bun */
 import { serve, type Serve } from "bun";
-import { build_options, hostname, port, development } from "./env";
+import { adapter_options, hostname, port, development } from "./env";
 import handler from "./handler";
 
-const { fetch, websocket } = handler(build_options.assets ?? true);
+const { fetch, websocket } = handler(adapter_options.assets ?? true);
 
 const serverOptions: Serve = {
-  //baseURI: env("ORIGIN", undefined),
+  //baseURI: origin,
   fetch,
   hostname,
   port,
