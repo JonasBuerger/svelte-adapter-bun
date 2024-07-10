@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index a8e7b1d67112c1f6a35287e1a860f22ca1250c0c..bdecfa5deaf160878a46c8ae4a43ed04d8fafe07 100644
+--- a/package.json
++++ b/package.json
+@@ -45,7 +45,7 @@
+     },
+     "scripts": {},
+     "dependencies": {
+-        "bun-types": "1.1.17"
++        "bun-types": "1.1.18"
+     },
+     "typesPublisherContentHash": "316b1733601c7a5c43a55dd02fa4f6e605bfd4d5b7ba3ca725fc4fe3c6e479f5",
+     "typeScriptVersion": "4.8"

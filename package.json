@@ -76,6 +76,7 @@
     "access": "public"
   },
   "patchedDependencies": {
-    "bun-types@1.1.18": "patches/bun-types@1.1.18.patch"
+    "bun-types@1.1.18": "patches/bun-types@1.1.18.patch",
+    "@types/bun@1.1.6": "patches/@types%2Fbun@1.1.6.patch"
   }
 }
