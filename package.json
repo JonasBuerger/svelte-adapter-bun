@@ -28,7 +28,7 @@
     "build:server": "bun build src/index.ts src/handler.ts --target=bun --format=esm --splitting --outdir=files --external=__SERVER --external=__MANIFEST",
     "format": "bun x --bun prettier --write .",
     "prepack": "bun run build",
-    "clean": "rm -rf files && rm -rf ./*.js && rm -rf ./*.d.ts && rm -rf ./src/*.js && rm -rf ./src/*.d.ts && echo 'Done.'",
+    "clean": "rm -rf files ./*.js ./*.d.ts ./src/*.js ./src/*.d.ts ./test/project-* ./test/certs-* ./test/project/node_modules ./test/project/.svelte-kit ./test/project/build ./test/project/bun.lockb && echo 'Done.'",
     "watch": "bun --watch run build"
   },
   "repository": {
