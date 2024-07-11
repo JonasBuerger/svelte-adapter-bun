@@ -4,7 +4,6 @@ import {
   manifest,
   development,
   xff_depth,
-  origin,
   address_header,
   protocol_header,
   host_header,
@@ -119,21 +118,12 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
     console.info("ssr(", url.toString(), ",", clientIp, ")");
   }
 
-  if (origin) {
-    if (development) {
-      console.info("Handling origin header");
-    }
-    const new_url = new URL(origin);
-    new_url.pathname = url.pathname;
-    new_url.search = url.search;
-    new_url.hash = url.hash;
-    req = clone_req(new_url, request);
-  } else if (
+  if (
     (host_header && url.host !== request.headers.get(host_header)) ||
     (protocol_header && url.protocol !== request.headers.get(protocol_header) + ":")
   ) {
     if (development) {
-      console.info("Handling x-forwarded-* header:", host_header, protocol_header);
+      console.info("Handling proxy headers:", host_header, protocol_header);
     }
     if (host_header) {
       url.host = request.headers.get(host_header);

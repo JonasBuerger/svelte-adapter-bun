@@ -7,12 +7,18 @@ import {
   writeFileSync,
 } from "fs";
 import { pipeline } from "stream";
-import { Glob } from "bun";
+import { Glob, type TLSOptions as BunTLSOptions } from "bun";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
 import zlib from "zlib";
 import { type Adapter } from "@sveltejs/kit";
 export type { WebSocketHandler } from "./src/handler";
+
+export interface TLSOptions extends BunTLSOptions {
+  ca?: string | Array<string> | undefined;
+  cert?: string | Array<string> | undefined;
+  key?: string | Array<string> | undefined;
+}
 
 export interface BuildOptions {
   /**
@@ -66,48 +72,49 @@ export interface AdapterOptions {
 
   /**
    * Render contextual errors? This enables bun's error page
+   * Can be set via the SERVERDEV environment variable
    * @default false
    */
   development?: boolean;
 
   /**
-   * The default value of HOST if environment is not set.
+   * The default value of HOST if environment variable is not set.
    * @default '0.0.0.0'
    */
   host?: string;
 
   /**
-   * The default value of PORT if environment is not set.
+   * The default value of PORT if environment variable is not set.
    * @default '3000'
    */
   port?: number;
 
   /**
-   * The default value of ORIGIN if environment is not set.
-   * @default undefined
+   * Settings for tls encryption.
+   * @default []
    */
-  origin?: string;
+  tls?: TLSOptions | TLSOptions[];
 
   /**
-   * The default value of ADDRESS_HEADER if environment is not set.
-   * @default ''
-   */
-  address_header?: string;
-
-  /**
-   * The default value of PROTOCOL_HEADER if environment is not set.
+   * The default value of PROTOCOL_HEADER if environment variable is not set.
    * @default ''
    */
   protocol_header?: string;
 
   /**
-   * The default value of HOST_HEADER if environment is not set.
+   * The default value of HOST_HEADER if environment variable is not set.
    * @default 'host'
    */
   host_header?: string;
 
   /**
-   * The default value of XFF_DEPTH if environment is not set.
+   * The default value of ADDRESS_HEADER if environment variable is not set.
+   * @default ''
+   */
+  address_header?: string;
+
+  /**
+   * The default value of XFF_DEPTH if environment variable is not set.
    * @default 0
    */
   xff_depth?: number;
@@ -126,10 +133,10 @@ export default function ({
   xff_depth = 0,
   host = "0.0.0.0",
   port = 3000,
-  origin = undefined,
   address_header = "",
   protocol_header = "",
   host_header = "host",
+  tls = [],
 }: AdapterOptions & BuildOptions = {}): Adapter {
   return {
     name: "@jonasbuerger/svelte-adapter-bun",
@@ -174,10 +181,10 @@ export default function ({
             xff_depth,
             host,
             port,
-            origin,
             address_header,
             protocol_header,
             host_header,
+            tls,
           }),
         },
       });
