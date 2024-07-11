@@ -161,6 +161,30 @@ Type: `TLSOptions | TLSOptions[]`
 
 Sets the tls options for the bun server.
 
+### tls.cert
+
+Default: `""`
+
+Type: `string | string[]`
+
+The path to your certificate file relative to the project root.
+
+### tls.key
+
+Default: `""`
+
+Type: `string | string[]`
+
+The path to your key file relative to the project root.
+
+### forwarded
+
+Default: `false`
+
+Environment variable: `FORWARDED`
+
+Set to true if your proxy uses the [Forwarded](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded) Header.
+
 ### protocol_header
 
 Default: `""`

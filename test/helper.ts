@@ -1,6 +1,7 @@
 import { serve, spawn } from "bun";
-import type { Subprocess, TLSOptions, Server } from "bun";
+import type { Subprocess, TLSOptions, Server, BunFile } from "bun";
 import { mkdir, cp, rm } from "node:fs/promises";
+import { AdapterOptions } from "../index";
 
 export type ProxyOptions = {
   hostname?: string;
@@ -48,7 +49,7 @@ export function getProxy(): {
         const proxyRequest = new Request(requestUrl, request);
         proxyRequest.headers.set("X-Forwarded-Proto", tls ? "https" : "http");
         proxyRequest.headers.set("X-Forwarded-Host", hostname);
-        //proxyRequest.headers.set("X-Forwarded-For", "8.8.8.8");
+        proxyRequest.headers.set("X-Forwarded-For", this.server.requestIP(request));
         proxyRequest.headers.set("Origin", this.server.url.origin);
         return fetch(proxyRequest);
       };
@@ -65,30 +66,38 @@ export function getProxy(): {
 export function getTestProject(): {
   server: Subprocess<"ignore", "pipe", "inherit">;
   projectDir: string;
-  setup: (_?: {
-    hostname?: string;
-    port?: number;
-    protocol_header?: string;
-    host_header?: string;
-    xff_depth?: number;
-  }) => Promise<void>;
+  setup: (_?: AdapterOptions) => Promise<void>;
   teardown: () => Promise<void>;
 } {
   return {
     server: undefined,
     projectDir: undefined,
-    async setup({
-      hostname = "localhost",
-      port = 7000,
-      protocol_header = "X-Forwarded-Proto",
-      host_header = "X-Forwarded-Host",
-      xff_depth = 0,
-    } = {}) {
+    async setup(options = {}) {
       if (this.server) {
         throw new Error("Server already running");
       }
       this.projectDir = `${CWD}/test/project-${newRandomId()}`;
       await cp(`${CWD}/test/project`, this.projectDir, { recursive: true });
+      const svelteConfig = Bun.file(this.projectDir + "/svelte.config.js");
+      if (options.tls) {
+        await Promise.all([
+          Bun.write(
+            Bun.file(this.projectDir + "/server.key"),
+            (options.tls as TLSOptions).key as BunFile,
+          ),
+          Bun.write(
+            Bun.file(this.projectDir + "/server.crt"),
+            (options.tls as TLSOptions).cert as BunFile,
+          ),
+        ]);
+        (options.tls as TLSOptions).key = "server.key";
+        (options.tls as TLSOptions).cert = "server.crt";
+      }
+      options.development = true;
+      await Bun.write(
+        Bun.file(this.projectDir + "/svelte.config.js"),
+        (await svelteConfig.text()).replace("__ADAPTER_OPTIONS", JSON.stringify(options)),
+      );
       await spawn({
         cmd: ["bun", "install"],
         cwd: this.projectDir,
@@ -102,18 +111,14 @@ export function getTestProject(): {
       this.server = spawn({
         cmd: ["bun", "./build/index.js"],
         cwd: this.projectDir,
-        env: {
-          HOST: hostname,
-          PORT: port.toString(),
-          HOST_HEADER: host_header,
-          PROTOCOL_HEADER: protocol_header,
-          XFF_DEPTH: xff_depth.toString(),
-          SERVERDEV: "1",
-        },
       });
       const decoder = new TextDecoder();
       for await (const chunk of this.server.stdout) {
-        if (RegExp(`^Listening on ${hostname}:${port}`).test(decoder.decode(chunk))) {
+        if (
+          RegExp(`^Listening on ${options.host ?? "0.0.0.0"}:${options.port ?? 3000}`).test(
+            decoder.decode(chunk),
+          )
+        ) {
           break;
         }
       }

@@ -96,6 +96,13 @@ export interface AdapterOptions {
   tls?: TLSOptions | TLSOptions[];
 
   /**
+   * The default value of FORWARDED
+   * Proxied using the rfc7239 "Forwarded" Header
+   * @default false
+   */
+  forwarded?: boolean;
+
+  /**
    * The default value of PROTOCOL_HEADER if environment variable is not set.
    * @default ''
    */
@@ -134,6 +141,7 @@ export default function ({
   host = "0.0.0.0",
   port = 3000,
   address_header = "",
+  forwarded = false,
   protocol_header = "",
   host_header = "host",
   tls = [],
@@ -181,6 +189,7 @@ export default function ({
             xff_depth,
             host,
             port,
+            forwarded,
             address_header,
             protocol_header,
             host_header,

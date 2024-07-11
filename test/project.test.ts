@@ -2,7 +2,7 @@ import { expect, test, describe, beforeAll, afterAll } from "bun:test";
 import { getCerts, getProxy, getTestProject } from "./helper";
 const proxy_map = new Map([["/test-project", "localhost:7003"]]);
 
-describe("test project", () => {
+describe("test project via proxy", () => {
   let proxy, test_project;
 
   beforeAll(async () => {
@@ -10,7 +10,11 @@ describe("test project", () => {
     test_project = getTestProject();
     return await Promise.all([
       proxy.setup({ proxy_map, port: 7000 }),
-      test_project.setup({ port: 7001 }),
+      test_project.setup({
+        port: 7001,
+        protocol_header: "X-Forwarded-Proto",
+        host_header: "X-Forwarded-Host",
+      }),
     ]);
   });
 
@@ -18,18 +22,7 @@ describe("test project", () => {
     return await Promise.all([proxy.teardown(), test_project.teardown()]);
   });
 
-  test("static file direct", async () => {
-    const response = fetch("http://localhost:7001/hello.html")
-      .then(res => {
-        expect(res.ok).toBeTrue();
-        return res;
-      })
-      .then(res => res.text())
-      .catch(e => console.error(e));
-    expect(response).resolves.toEqual("static hello\n");
-  }, 100);
-
-  test("static file proxy", async () => {
+  test("static file", async () => {
     const response = fetch(proxy.server.url.origin + "/test-project/hello.html")
       .then(res => {
         expect(res.ok).toBeTrue();
@@ -40,18 +33,7 @@ describe("test project", () => {
     expect(response).resolves.toEqual("static hello\n");
   }, 100);
 
-  test("page route direct", async () => {
-    const response = fetch("http://localhost:7001/")
-      .then(res => {
-        expect(res.ok).toBeTrue();
-        return res;
-      })
-      .then(res => res.text())
-      .catch(e => console.error(e));
-    expect(response).resolves.toContain("Hello, World!");
-  }, 100);
-
-  test("page route proxy", async () => {
+  test("page route", async () => {
     const response = fetch(proxy.server.url.origin + "/test-project/")
       .then(res => {
         expect(res.ok).toBeTrue();
@@ -85,7 +67,7 @@ describe("test project", () => {
   }, 100);
 });
 
-describe("test project with tls", () => {
+describe("test project with tls via proxy", () => {
   let proxy, test_project, certs;
 
   beforeAll(async () => {
@@ -95,7 +77,11 @@ describe("test project with tls", () => {
     await certs.setup();
     return await Promise.all([
       proxy.setup({ proxy_map, tls: certs.tls, port: 7002 }),
-      test_project.setup({ port: 7003 }),
+      test_project.setup({
+        port: 7003,
+        protocol_header: "X-Forwarded-Proto",
+        host_header: "X-Forwarded-Host",
+      }),
     ]);
   });
 

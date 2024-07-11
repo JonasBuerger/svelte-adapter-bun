@@ -2,12 +2,33 @@
 export { Server } from "__SERVER";
 // @ts-ignore
 export { manifest } from "__MANIFEST";
-import type { AdapterOptions } from "..";
+import type { AdapterOptions, TLSOptions } from "..";
+import type { BunFile, TLSOptions as BunTLSOptions } from "bun";
 
 function env(name: string, fallback: any): any {
   const prefixed = env_prefix + name;
 
   return prefixed in Bun.env ? Bun.env[prefixed] : fallback;
+}
+function makeBunFiles(paths: string[] | string | undefined): BunFile[] | BunFile | undefined {
+  if (paths !== undefined && paths.length > 0) {
+    return Array.isArray(paths) ? paths.map(path => Bun.file(path)) : Bun.file(paths);
+  }
+}
+function parseTLSOption(option: TLSOptions): BunTLSOptions {
+  return {
+    ...option,
+    ca: makeBunFiles(option.ca),
+    cert: makeBunFiles(option.cert),
+    key: makeBunFiles(option.key),
+  } satisfies BunTLSOptions;
+}
+function parseTLSOptions(
+  tls: TLSOptions | TLSOptions[],
+): BunTLSOptions[] | BunTLSOptions | undefined {
+  if (tls !== undefined) {
+    return Array.isArray(tls) ? tls.map(parseTLSOption) : parseTLSOption(tls);
+  }
 }
 
 const expected = new Set([
@@ -40,6 +61,7 @@ if (env_prefix) {
 export const development: boolean = !!env("SERVERDEV", adapter_options.development ?? false);
 export const hostname: string = env("HOST", adapter_options.host ?? "0.0.0.0").toString();
 export const port: number = parseInt(env("PORT", adapter_options.port ?? 3000));
+export const forwarded: boolean = !!env("FORWARDED", adapter_options.forwarded ?? false);
 export const protocol_header: string = env(
   "PROTOCOL_HEADER",
   adapter_options.protocol_header ?? "",
@@ -55,4 +77,5 @@ export const address_header: string = env(
 export const xff_depth: number = parseInt(env("XFF_DEPTH", adapter_options.xff_depth ?? 0));
 
 export const assets = adapter_options.assets;
-export const tls = adapter_options.tls ?? [];
+
+export const tls = parseTLSOptions(adapter_options.tls);
