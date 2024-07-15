@@ -1,16 +1,24 @@
 import { beforeAll, afterAll } from "bun:test";
 
 beforeAll(async () => {
-  await Bun.spawn({
+  let result = Bun.spawnSync({
     cmd: ["bun", "run", "build"],
-    stdout: "inherit",
-  }).exited;
+  });
+  if (result.exitCode !== 0) {
+    console.info(result.stdout);
+    console.error(result.stderr);
+    throw new Error("Project build failed");
+  }
   if (!(await Bun.file("test/project/bun.lockb").exists())) {
-    await Bun.spawn({
+    result = Bun.spawnSync({
       cmd: ["bun", "install"],
       cwd: process.cwd() + "/test/project",
-      stdout: "inherit",
-    }).exited;
+    });
+    if (result.exitCode !== 0) {
+      console.info(result.stdout);
+      console.error(result.stderr);
+      throw new Error("Test project install failed");
+    }
   }
 });
 

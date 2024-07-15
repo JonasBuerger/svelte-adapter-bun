@@ -1,7 +1,13 @@
+/**Replaced during <code>adapt()</code> call*/
 // @ts-ignore
 export { Server } from "__SERVER";
+/**Replaced during <code>adapt()</code> call*/
 // @ts-ignore
 export { manifest } from "__MANIFEST";
+/**Replaced during <code>adapt()</code> call*/
+// @ts-ignore
+const adapter_options = __ADAPTER_OPTIONS as AdapterOptions;
+
 import type { AdapterOptions, TLSOptions } from "..";
 import type { BunFile, TLSOptions as BunTLSOptions } from "bun";
 
@@ -40,9 +46,6 @@ const expected = new Set([
   "HOST_HEADER",
   "SERVERDEV",
 ]);
-
-// @ts-ignore
-const adapter_options = __ADAPTER_OPTIONS as AdapterOptions;
 export const env_prefix: string = (adapter_options.envPrefix ?? "").toString();
 
 if (env_prefix) {

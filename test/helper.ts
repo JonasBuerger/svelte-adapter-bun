@@ -1,4 +1,4 @@
-import { serve, spawn } from "bun";
+import { serve, spawn, spawnSync } from "bun";
 import type { Subprocess, TLSOptions, Server, BunFile } from "bun";
 import { mkdir, cp, rm } from "node:fs/promises";
 import { AdapterOptions } from "../index";
@@ -112,16 +112,15 @@ export function getTestProject(): {
         Bun.file(this.projectDir + "/svelte.config.js"),
         (await svelteConfig.text()).replace("__ADAPTER_OPTIONS", JSON.stringify(options)),
       );
-      await spawn({
-        cmd: ["bun", "install"],
-        cwd: this.projectDir,
-        stdout: null,
-      }).exited;
-      await spawn({
+      let { exitCode, stderr } = spawnSync({
         cmd: ["bun", "x", "--bun", "vite", "build"],
         cwd: this.projectDir,
         stdout: null,
-      }).exited;
+      });
+      if (exitCode !== 0) {
+        console.error(stderr);
+        throw new Error("Test project build failed");
+      }
       this.server = spawn({
         cmd: ["bun", "./build/index.js"],
         cwd: this.projectDir,
@@ -161,7 +160,7 @@ export function getCerts(): {
       }
       this.tempDir = `${CWD}/test/certs-${newRandomId()}`;
       await mkdir(this.tempDir);
-      await spawn({
+      let result = spawnSync({
         cmd: [
           "openssl",
           "genrsa",
@@ -174,9 +173,12 @@ export function getCerts(): {
         ],
         cwd: this.tempDir,
         stdout: "ignore",
-        stderr: "ignore",
-      }).exited;
-      await spawn({
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr);
+        throw new Error("RSA private key generation failed");
+      }
+      result = spawnSync({
         cmd: [
           "openssl",
           "rsa",
@@ -189,16 +191,22 @@ export function getCerts(): {
         ],
         cwd: this.tempDir,
         stdout: "ignore",
-        stderr: "ignore",
-      }).exited;
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr);
+        throw new Error("RSA private key generation failed");
+      }
       await rm(`${this.tempDir}/server.pass.key`);
-      await spawn({
+      result = spawnSync({
         cmd: ["openssl", "req", "-new", "-batch", "-key", "server.key", "-out", "server.csr"],
         cwd: this.tempDir,
         stdout: "ignore",
-        stderr: "ignore",
-      }).exited;
-      await spawn({
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr);
+        throw new Error("Certificate request generation failed");
+      }
+      result = spawnSync({
         cmd: [
           "openssl",
           "x509",
@@ -215,8 +223,11 @@ export function getCerts(): {
         ],
         cwd: this.tempDir,
         stdout: "ignore",
-        stderr: "ignore",
-      }).exited;
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr);
+        throw new Error("Certificate signing request failed");
+      }
       this.tls = {
         key: Bun.file(`${this.tempDir}/server.key`),
         cert: Bun.file(`${this.tempDir}/server.crt`),
