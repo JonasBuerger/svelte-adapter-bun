@@ -74,7 +74,7 @@ export const address_header: string = env(
   "ADDRESS_HEADER",
   adapter_options.address_header ?? "",
 ).toLowerCase();
-export const xff_depth: number = parseInt(env("XFF_DEPTH", adapter_options.xff_depth ?? 0));
+export const xff_depth: number = parseInt(env("XFF_DEPTH", adapter_options.xff_depth ?? 1));
 
 export const assets = adapter_options.assets;
 

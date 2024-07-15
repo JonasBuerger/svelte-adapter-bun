@@ -122,7 +122,7 @@ export interface AdapterOptions {
 
   /**
    * The default value of XFF_DEPTH if environment variable is not set.
-   * @default 0
+   * @default 1
    */
   xff_depth?: number;
 }
@@ -137,7 +137,7 @@ export default function ({
   assets = true,
   envPrefix = "",
   development = false,
-  xff_depth = 0,
+  xff_depth = 1,
   host = "0.0.0.0",
   port = 3000,
   address_header = "",

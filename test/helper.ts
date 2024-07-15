@@ -8,6 +8,7 @@ export type ProxyOptions = {
   port?: number;
   tls?: TLSOptions;
   proxy_map: Map<string, string>;
+  forwarded_header?: boolean;
 };
 const CWD = process.cwd();
 function newRandomId(): string {
@@ -18,14 +19,24 @@ function newRandomId(): string {
 
 export function getProxy(): {
   server: Server;
-  setup: (_: ProxyOptions) => Promise<void>;
+  setup: (options: ProxyOptions) => Promise<void>;
   teardown: () => Promise<void>;
 } {
   return {
     server: undefined,
-    async setup({ hostname = "localhost", port = 7000, tls = undefined, proxy_map }: ProxyOptions) {
+    async setup({
+      hostname = "localhost",
+      port = 7000,
+      tls = undefined,
+      forwarded_header = false,
+      proxy_map,
+    }: ProxyOptions) {
       if (this.server) {
         throw new Error("Server already running");
+      }
+      let host = hostname;
+      if (((!tls && port != 80) || (tls && port != 443)) && !host.endsWith(":" + port)) {
+        host += ":" + port;
       }
       const fetch_handler = async (request: Request) => {
         const requestUrl = new URL(request.url);
@@ -42,18 +53,20 @@ export function getProxy(): {
         if (!matched) {
           return new Response("Not Found", { status: 404 });
         }
-
-        if ((!tls && port != 80) || (tls && port != 443)) {
-          hostname += ":" + port;
-        }
         const proxyRequest = new Request(requestUrl, request);
-        proxyRequest.headers.set("X-Forwarded-Proto", tls ? "https" : "http");
-        proxyRequest.headers.set("X-Forwarded-Host", hostname);
-        proxyRequest.headers.set("X-Forwarded-For", this.server.requestIP(request));
+        if (forwarded_header) {
+          proxyRequest.headers.set(
+            "Forwarded",
+            `proto=${tls ? "https" : "http"};host="${host}";for=${this.server.requestIP(request).address}`,
+          );
+        } else {
+          proxyRequest.headers.set("X-Forwarded-Proto", tls ? "https" : "http");
+          proxyRequest.headers.set("X-Forwarded-Host", host);
+          proxyRequest.headers.set("X-Forwarded-For", this.server.requestIP(request).address);
+        }
         proxyRequest.headers.set("Origin", this.server.url.origin);
         return fetch(proxyRequest);
       };
-
       this.server = serve({ fetch: fetch_handler, hostname, port, tls });
     },
     async teardown() {
@@ -66,7 +79,7 @@ export function getProxy(): {
 export function getTestProject(): {
   server: Subprocess<"ignore", "pipe", "inherit">;
   projectDir: string;
-  setup: (_?: AdapterOptions) => Promise<void>;
+  setup: (options?: AdapterOptions) => Promise<void>;
   teardown: () => Promise<void>;
 } {
   return {
@@ -159,7 +172,8 @@ export function getCerts(): {
           "4096",
         ],
         cwd: this.tempDir,
-        stdout: null,
+        stdout: "ignore",
+        stderr: "ignore",
       }).exited;
       await spawn({
         cmd: [
@@ -173,13 +187,15 @@ export function getCerts(): {
           "server.key",
         ],
         cwd: this.tempDir,
-        stdout: null,
+        stdout: "ignore",
+        stderr: "ignore",
       }).exited;
       await rm(`${this.tempDir}/server.pass.key`);
       await spawn({
         cmd: ["openssl", "req", "-new", "-batch", "-key", "server.key", "-out", "server.csr"],
         cwd: this.tempDir,
-        stdout: null,
+        stdout: "ignore",
+        stderr: "ignore",
       }).exited;
       await spawn({
         cmd: [
@@ -197,7 +213,8 @@ export function getCerts(): {
           "server.crt",
         ],
         cwd: this.tempDir,
-        stdout: null,
+        stdout: "ignore",
+        stderr: "ignore",
       }).exited;
       this.tls = {
         key: Bun.file(`${this.tempDir}/server.key`),

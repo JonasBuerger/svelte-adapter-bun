@@ -184,6 +184,7 @@ Default: `false`
 Environment variable: `FORWARDED`
 
 Set to true if your proxy uses the [Forwarded](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded) Header.
+If this option is set, then `protocol_header`, `host_header` and `address_header` are ignored.
 
 ### protocol_header
 
@@ -217,9 +218,9 @@ The [RequestEvent](https://kit.svelte.dev/docs/types#additional-types-requesteve
 
 ### xff_depth
 
-Default: `0`
+Default: `1`
 
-The count of trusted proxies before your server, used in conjunction with [address_header](#address_header).
+The count of trusted proxies before your server, used in conjunction with [address_header](#address_header) `X-Forwarded-For` or the `Forwarded` header.
 
 ## :spider_web: WebSocket Server
 

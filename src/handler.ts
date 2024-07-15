@@ -120,22 +120,22 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
     console.info("ssr(", url.toString(), ",", clientIp, ")");
   }
 
-  if(forwarded) {
+  if (forwarded) {
+    if (!request.headers.has("forwarded")) {
+      throw new Error(
+        `${env_prefix + "FORWARDED"} is set but request header "Forwarded" is empty.`,
+      );
+    }
     if (development) {
-      console.info("Handling \"Forwarded\" header", request.headers.get("forwarded"));
+      console.info('Handling "Forwarded" header', request.headers.get("forwarded"));
     }
-    if(request.headers.get("forwarded")){
-      throw new Error(`${env_prefix + "FORWARDED"} is set but request header "Forwarded" is empty.`);
+    const forwardedHeader = parseForwarded(request.headers.get("forwarded"));
+    if (forwardedHeader["proto"]) {
+      url.protocol = forwardedHeader["proto"] + ":";
     }
-    const proxy = parseForwarded(request.headers.get("forwarded"))
-    if(proxy.has("proto")){
-      url.protocol = proxy.get("proto") + ":";
+    if (forwardedHeader["host"]) {
+      url.host = forwardedHeader["host"];
     }
-    if(proxy.has("host")){
-      url.host = proxy.get("host");
-    }
-
-
   } else if (
     (host_header && url.host !== request.headers.get(host_header)) ||
     (protocol_header && url.protocol !== request.headers.get(protocol_header) + ":")
@@ -143,8 +143,10 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
     if (development) {
       console.info("Handling proxy headers:", host_header, protocol_header);
     }
-    if(!(request.headers.get(host_header) && request.headers.get(protocol_header))){
-      throw new Error(`${env_prefix + "HOST_HEADER"} and ${env_prefix + "PROTOCOL_HEADER"} are set but request headers are empty.`);
+    if (!(request.headers.get(host_header) && request.headers.get(protocol_header))) {
+      throw new Error(
+        `${env_prefix + "HOST_HEADER"} and ${env_prefix + "PROTOCOL_HEADER"} are set but request headers are empty.`,
+      );
     }
     if (host_header) {
       url.host = request.headers.get(host_header);
@@ -168,13 +170,18 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
       if (development) {
         console.info("getClientAddress(", req.url, ")");
       }
-      if (address_header) {
+      if (forwarded) {
+        const forwardedHeader = parseForwarded(request.headers.get("forwarded"));
+        if (forwardedHeader["for"]) {
+          return forwardedHeader["for"];
+        }
+      } else if (address_header) {
         const value = /** @type {string} */ req.headers.get(address_header) || "";
 
         if (address_header === "x-forwarded-for") {
           const addresses = value.split(",");
 
-          if (xff_depth < 0) {
+          if (xff_depth < 1) {
             throw new Error(`${env_prefix + "XFF_DEPTH"} must be a positive integer`);
           }
 
