@@ -5,8 +5,8 @@ beforeAll(async () => {
     cmd: ["bun", "run", "build"],
   });
   if (result.exitCode !== 0) {
-    console.info(result.stdout);
-    console.error(result.stderr);
+    console.info(result.stdout.toString());
+    console.error(result.stderr.toString());
     throw new Error("Project build failed");
   }
   if (!(await Bun.file("test/project/bun.lockb").exists())) {
@@ -15,8 +15,8 @@ beforeAll(async () => {
       cwd: process.cwd() + "/test/project",
     });
     if (result.exitCode !== 0) {
-      console.info(result.stdout);
-      console.error(result.stderr);
+      console.info(result.stdout.toString());
+      console.error(result.stderr.toString());
       throw new Error("Test project install failed");
     }
   }

@@ -118,7 +118,7 @@ export function getTestProject(): {
         stdout: null,
       });
       if (exitCode !== 0) {
-        console.error(stderr);
+        console.error(stderr.toString());
         throw new Error("Test project build failed");
       }
       this.server = spawn({
@@ -175,7 +175,7 @@ export function getCerts(): {
         stdout: "ignore",
       });
       if (result.exitCode !== 0) {
-        console.error(result.stderr);
+        console.error(result.stderr.toString());
         throw new Error("RSA private key generation failed");
       }
       result = spawnSync({
@@ -193,7 +193,7 @@ export function getCerts(): {
         stdout: "ignore",
       });
       if (result.exitCode !== 0) {
-        console.error(result.stderr);
+        console.error(result.stderr.toString());
         throw new Error("RSA private key generation failed");
       }
       await rm(`${this.tempDir}/server.pass.key`);
@@ -203,7 +203,7 @@ export function getCerts(): {
         stdout: "ignore",
       });
       if (result.exitCode !== 0) {
-        console.error(result.stderr);
+        console.error(result.stderr.toString());
         throw new Error("Certificate request generation failed");
       }
       result = spawnSync({
@@ -225,7 +225,7 @@ export function getCerts(): {
         stdout: "ignore",
       });
       if (result.exitCode !== 0) {
-        console.error(result.stderr);
+        console.error(result.stderr.toString());
         throw new Error("Certificate signing request failed");
       }
       this.tls = {
