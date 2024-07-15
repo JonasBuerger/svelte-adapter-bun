@@ -54,15 +54,16 @@ export function getProxy(): {
           return new Response("Not Found", { status: 404 });
         }
         const proxyRequest = new Request(requestUrl, request);
+        const requestAddress = this.server.requestIP(request).address;
         if (forwarded_header) {
           proxyRequest.headers.set(
             "Forwarded",
-            `proto=${tls ? "https" : "http"};host="${host}";for=${this.server.requestIP(request).address}`,
+            `proto=${tls ? "https" : "http"};host=${/^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/.test(host) ? host : '"' + host + '"'};for=${/^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/.test(requestAddress) ? requestAddress : '"' + requestAddress + '"'}`,
           );
         } else {
           proxyRequest.headers.set("X-Forwarded-Proto", tls ? "https" : "http");
           proxyRequest.headers.set("X-Forwarded-Host", host);
-          proxyRequest.headers.set("X-Forwarded-For", this.server.requestIP(request).address);
+          proxyRequest.headers.set("X-Forwarded-For", requestAddress);
         }
         proxyRequest.headers.set("Origin", this.server.url.origin);
         return fetch(proxyRequest);
