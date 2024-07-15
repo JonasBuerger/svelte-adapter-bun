@@ -4,10 +4,10 @@ import {
   manifest,
   development,
   xff_depth,
-  origin,
   address_header,
   protocol_header,
   host_header,
+  forwarded,
 } from "./env";
 import {
   fileURLToPath,
@@ -19,6 +19,7 @@ import path from "path";
 import { default as bunsirv, type NextHandler } from "./bunsirv";
 import { existsSync } from "fs";
 import type { Server as KitServer } from "@sveltejs/kit";
+import { parse as parseForwarded } from "./forwarded";
 
 const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)));
 type WebSocketUpgradeHandler = (request: Request, server: BunServer) => Promise<boolean> | boolean;
@@ -119,21 +120,33 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
     console.info("ssr(", url.toString(), ",", clientIp, ")");
   }
 
-  if (origin) {
-    if (development) {
-      console.info("Handling origin header");
+  if (forwarded) {
+    if (!request.headers.has("forwarded")) {
+      throw new Error(
+        `${env_prefix + "FORWARDED"} is set but request header "Forwarded" is empty.`,
+      );
     }
-    const new_url = new URL(origin);
-    new_url.pathname = url.pathname;
-    new_url.search = url.search;
-    new_url.hash = url.hash;
-    req = clone_req(new_url, request);
+    if (development) {
+      console.info('Handling "Forwarded" header', request.headers.get("forwarded"));
+    }
+    const forwardedHeader = parseForwarded(request.headers.get("forwarded"));
+    if (forwardedHeader["proto"]) {
+      url.protocol = forwardedHeader["proto"] + ":";
+    }
+    if (forwardedHeader["host"]) {
+      url.host = forwardedHeader["host"];
+    }
   } else if (
     (host_header && url.host !== request.headers.get(host_header)) ||
     (protocol_header && url.protocol !== request.headers.get(protocol_header) + ":")
   ) {
     if (development) {
-      console.info("Handling x-forwarded-* header:", host_header, protocol_header);
+      console.info("Handling proxy headers:", host_header, protocol_header);
+    }
+    if (!(request.headers.get(host_header) && request.headers.get(protocol_header))) {
+      throw new Error(
+        `${env_prefix + "HOST_HEADER"} and ${env_prefix + "PROTOCOL_HEADER"} are set but request headers are empty.`,
+      );
     }
     if (host_header) {
       url.host = request.headers.get(host_header);
@@ -157,13 +170,18 @@ function ssr(request: Request, _: NextHandler, bunServer: BunServer) {
       if (development) {
         console.info("getClientAddress(", req.url, ")");
       }
-      if (address_header) {
+      if (forwarded) {
+        const forwardedHeader = parseForwarded(request.headers.get("forwarded"));
+        if (forwardedHeader["for"]) {
+          return forwardedHeader["for"];
+        }
+      } else if (address_header) {
         const value = /** @type {string} */ req.headers.get(address_header) || "";
 
         if (address_header === "x-forwarded-for") {
           const addresses = value.split(",");
 
-          if (xff_depth < 0) {
+          if (xff_depth < 1) {
             throw new Error(`${env_prefix + "XFF_DEPTH"} must be a positive integer`);
           }
 

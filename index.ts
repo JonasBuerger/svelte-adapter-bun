@@ -7,33 +7,32 @@ import {
   writeFileSync,
 } from "fs";
 import { pipeline } from "stream";
-import { Glob } from "bun";
+import { Glob, type TLSOptions as BunTLSOptions } from "bun";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
 import zlib from "zlib";
-import { rollup } from "rollup";
-import { nodeResolve } from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
-import json from "@rollup/plugin-json";
 import { type Adapter } from "@sveltejs/kit";
 export type { WebSocketHandler } from "./src/handler";
 
+export interface TLSOptions extends BunTLSOptions {
+  ca?: string | Array<string> | undefined;
+  cert?: string | Array<string> | undefined;
+  key?: string | Array<string> | undefined;
+}
+
 export interface BuildOptions {
   /**
-   * Render contextual errors? This enables bun's error page
+   * The directory to build the server to. It defaults to build — i.e. node build would start the server locally after it has been created.
+   * @default "build"
+   */
+  out?: string;
+
+  /**
+   * Enables precompressing using gzip and brotli for assets and prerendered pages. It defaults to false.
    * @default false
    */
-  development?: boolean;
-  /**
-   * The default value of XFF_DEPTH if environment is not set.
-   * @default 0
-   */
-  xff_depth?: number;
-  /**
-   * Browse a static assets
-   * @default true
-   */
-  assets?: boolean;
+  precompress?: boolean | CompressOptions;
+
   /**
    * Transpile server side code with bun transpiler for optimization for bun.
    * @default true
@@ -58,23 +57,74 @@ export interface CompressOptions {
   files?: string[];
 }
 
-export interface AdapterOptions extends BuildOptions {
+export interface AdapterOptions {
   /**
-   * The directory to build the server to. It defaults to build — i.e. node build would start the server locally after it has been created.
-   * @default "build"
+   * Browse a static assets
+   * @default true
    */
-  out?: string;
-  /**
-   * Enables precompressing using gzip and brotli for assets and prerendered pages. It defaults to false.
-   * @default false
-   */
-  precompress?: boolean | CompressOptions;
+  assets?: boolean;
 
   /**
    * If you need to change the name of the environment variables used to configure the deployment (for example, to deconflict with environment variables you don't control), you can specify a prefix: envPrefix: 'MY_CUSTOM_';
    * @default ''
    */
   envPrefix?: string;
+
+  /**
+   * Render contextual errors? This enables bun's error page
+   * Can be set via the SERVERDEV environment variable
+   * @default false
+   */
+  development?: boolean;
+
+  /**
+   * The default value of HOST if environment variable is not set.
+   * @default '0.0.0.0'
+   */
+  host?: string;
+
+  /**
+   * The default value of PORT if environment variable is not set.
+   * @default '3000'
+   */
+  port?: number;
+
+  /**
+   * Settings for tls encryption.
+   * @default []
+   */
+  tls?: TLSOptions | TLSOptions[];
+
+  /**
+   * The default value of FORWARDED
+   * Proxied using the rfc7239 "Forwarded" Header
+   * @default false
+   */
+  forwarded?: boolean;
+
+  /**
+   * The default value of PROTOCOL_HEADER if environment variable is not set.
+   * @default ''
+   */
+  protocol_header?: string;
+
+  /**
+   * The default value of HOST_HEADER if environment variable is not set.
+   * @default 'host'
+   */
+  host_header?: string;
+
+  /**
+   * The default value of ADDRESS_HEADER if environment variable is not set.
+   * @default ''
+   */
+  address_header?: string;
+
+  /**
+   * The default value of XFF_DEPTH if environment variable is not set.
+   * @default 1
+   */
+  xff_depth?: number;
 }
 
 const pipe = promisify(pipeline);
@@ -83,16 +133,22 @@ const files = fileURLToPath(new URL("./files", import.meta.url).href);
 export default function ({
   out = "build",
   precompress = false,
+  transpileBun = true,
+  assets = true,
   envPrefix = "",
   development = false,
-  xff_depth = 0,
-  assets = true,
-  transpileBun = true,
-}: AdapterOptions = {}): Adapter {
+  xff_depth = 1,
+  host = "0.0.0.0",
+  port = 3000,
+  address_header = "",
+  forwarded = false,
+  protocol_header = "",
+  host_header = "host",
+  tls = [],
+}: AdapterOptions & BuildOptions = {}): Adapter {
   return {
     name: "@jonasbuerger/svelte-adapter-bun",
     async adapt(builder) {
-      const buildDir = builder.getBuildDirectory("adapter-bun");
       builder.rimraf(out);
       builder.mkdirp(out);
 
@@ -109,56 +165,36 @@ export default function ({
       }
 
       builder.log.minor("Building server");
-      builder.writeServer(buildDir);
+      builder.writeServer(`${out}/server`);
 
       writeFileSync(
-        `${buildDir}/manifest.js`,
-        `export const manifest = ${builder.generateManifest({ relativePath: "./" })};\n\n` +
+        `${out}/manifest.js`,
+        `export const manifest = ${builder.generateManifest({ relativePath: "./server" })};\n\n` +
           `export const prerendered = new Set(${JSON.stringify(builder.prerendered.paths)});\n`,
       );
 
       builder.log.minor("Patching server (websocket support)");
-      patchServerWebsocketHandler(buildDir);
+      patchServerWebsocketHandler(`${out}/server`);
 
       const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-
-      // we bundle the Vite output so that deployments only need
-      // their production dependencies. Anything in devDependencies
-      // will get included in the bundled code
-      const bundle = await rollup({
-        input: {
-          index: `${buildDir}/index.js`,
-          manifest: `${buildDir}/manifest.js`,
-        },
-        external: [
-          // dependencies could have deep exports, so we need a regex
-          ...Object.keys(pkg.dependencies || {}).map(d => new RegExp(`^${d}(\\/.*)?$`)),
-        ],
-        plugins: [
-          nodeResolve({
-            preferBuiltins: true,
-            exportConditions: ["node"],
-          }),
-          // @ts-ignore https://github.com/rollup/plugins/issues/1329
-          commonjs({ strictRequires: true }),
-          // @ts-ignore https://github.com/rollup/plugins/issues/1329
-          json(),
-        ],
-      });
-
-      await bundle.write({
-        dir: `${out}/server`,
-        format: "esm",
-        sourcemap: true,
-        chunkFileNames: "chunks/[name]-[hash].js",
-      });
 
       builder.copy(files, out, {
         replace: {
           __SERVER: "./server/index.js",
-          __MANIFEST: "./server/manifest.js",
-          __ENV_PREFIX: JSON.stringify(envPrefix),
-          __BUILD_OPTIONS: JSON.stringify({ development, xff_depth, assets, transpileBun }),
+          __MANIFEST: "./manifest.js",
+          __ADAPTER_OPTIONS: JSON.stringify({
+            assets,
+            envPrefix,
+            development,
+            xff_depth,
+            host,
+            port,
+            forwarded,
+            address_header,
+            protocol_header,
+            host_header,
+            tls,
+          }),
         },
       });
 

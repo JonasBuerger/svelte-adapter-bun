@@ -1,15 +1,15 @@
 /*! MIT © Volodymyr Palamar https://github.com/gornostay25/svelte-adapter-bun */
 import { serve, type Serve } from "bun";
-import { build_options, hostname, port, development } from "./env";
+import { assets, hostname, port, development, tls } from "./env";
 import handler from "./handler";
 
-const { fetch, websocket } = handler(build_options.assets ?? true);
+const { fetch, websocket } = handler(assets ?? true);
 
 const serverOptions: Serve = {
-  //baseURI: env("ORIGIN", undefined),
   fetch,
   hostname,
   port,
+  tls,
   development,
   error(error) {
     console.error(error);
@@ -23,7 +23,7 @@ console.info(`Listening on ${hostname + ":" + port}` + (websocket ? " (Websocket
 if (development) {
   console.info(serverOptions);
 }
-
+/**Close active connection*/
 const cleanup = () => {
   if (development) {
     console.info("Stop signal received, closing server");
@@ -31,9 +31,14 @@ const cleanup = () => {
   server.stop(true);
   process.exit(0);
 };
+/**Terminate immediatly*/
+const stop = () => {
+  server.stop(false);
+  process.exit(0);
+};
 
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 process.on("SIGQUIT", cleanup);
-process.on("SIGSTOP", cleanup);
-process.on("SIGKILL", cleanup);
+process.on("SIGSTOP", stop);
+process.on("SIGKILL", stop);

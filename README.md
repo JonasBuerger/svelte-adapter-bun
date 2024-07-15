@@ -33,10 +33,8 @@ import adapter from "@jonasbuerger/svelte-adapter-bun";
 export default {
   kit: {
     adapter: adapter({
+      //build options
       out: "build",
-      assets: true,
-      envPrefix: "MY_CUSTOM_",
-      development: true,
       // precompress: true,
       precompress: {
         brotli: true,
@@ -44,7 +42,20 @@ export default {
         files: ["htm", "html"],
       },
       transpileBun: false,
-      xff_depth: 0,
+      //server/adapter options
+      assets: true,
+      envPrefix: "MY_CUSTOM_",
+      development: true, //SERVERDEV
+      host: "localhost", //HOST
+      port: 3000, //PORT
+      tls: {
+        key: "server.key",
+        cert: "server.crt",
+      },
+      protocol_header: "X-Forwarded-Proto", //PROTOCOL_HEADER
+      host_header: "X-Forwarded-Host", //HOST_HEADER
+      address_header: "X-Forwarded-For", //ADDRESS_HEADER
+      xff_depth: 1, //XFF_DEPTH
     }),
   },
 };
@@ -56,6 +67,38 @@ Default: `"build"`
 
 The directory to build the server to — i.e. `bun run build/index.js` would start the server locally after it has been created.
 
+### precompress
+
+Default: `false`
+
+Type: `boolean | CompressOptions`
+
+Enables precompressing using gzip and brotli for assets and prerendered pages.
+
+#### precompress.brotli
+
+Default: `false`
+
+Enable brotli precompressing.
+
+#### precompress.gzip
+
+Default: `false`
+
+Enable gzip precompressing.
+
+#### precompress.files
+
+Default: `['html','js','json','css','svg','xml','wasm']`
+
+File extensions to compress.
+
+### transpileBun
+
+Default: `true`
+
+Runs buns [transpiler](https://bun.sh/docs/api/transpiler#transformsync) during the server build
+
 ### assets
 
 Default: `true`
@@ -64,34 +107,9 @@ Serve static assets.
 
 - [x] Supports [HTTP range requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests)
 
-### precompress
-
-Default: `false`
-
-Enables precompressing using gzip and brotli for assets and prerendered pages.
-
-#### brotli
-
-Default: `false`
-
-Enable brotli precompressing.
-
-#### gzip
-
-Default: `false`
-
-Enable gzip precompressing.
-
-#### files
-
-Default: `['html','js','json','css','svg','xml','wasm']`
-
-File extensions to compress.
-
 ### envPrefix
 
-If you need to change the name of the environment variables used to configure the deployment.
-For example, to deconflict with environment variables you don't control:
+May be used to deconflict/disambiguate adapter settings with environment variables you don't control:
 
 ```js
 // svelte.config.js
@@ -115,13 +133,94 @@ MY_CUSTOM_ORIGIN="https://my.site"
 
 Default: `false`
 
+Environment variable: `SERVERDEV`
+
 Enables bun's error page and additional logging.
+
+### host
+
+Default: `0.0.0.0`
+
+Environment variable: `HOST`
+
+Sets the hostname on which the server accepts connections.
+
+### port
+
+Default: `3000`
+
+Environment variable: `PORT`
+
+Sets the port on which the server accepts connections.
+
+### tls
+
+Default: `[]`
+
+Type: `TLSOptions | TLSOptions[]`
+
+Sets the tls options for the bun server.
+
+### tls.cert
+
+Default: `""`
+
+Type: `string | string[]`
+
+The path to your certificate file relative to the project root.
+
+### tls.key
+
+Default: `""`
+
+Type: `string | string[]`
+
+The path to your key file relative to the project root.
+
+### forwarded
+
+Default: `false`
+
+Environment variable: `FORWARDED`
+
+Set to true if your proxy uses the [Forwarded](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded) Header.
+If this option is set, then `protocol_header`, `host_header` and `address_header` are ignored.
+
+### protocol_header
+
+Default: `""`
+
+Environment variable: `PROTOCOL_HEADER`
+
+Header set by proxy, to determine the original protocol.
+
+### host_header
+
+Default: `""`
+
+Environment variable: `HOST_HEADER`
+
+Header set by proxy, to determine the original hostname.
+
+From [SvelteKit Dokumentation](https://kit.svelte.dev/docs/adapter-node#environment-variables-origin-protocolheader-hostheader-and-port-header):
+
+> [`x-forwarded-proto`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto) and [`x-forwarded-host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) are de facto standard headers that forward the original protocol and host if you're using a reverse proxy (think load balancers and CDNs). You should only set these variables if your server is behind a trusted reverse proxy; otherwise, it'd be possible for clients to spoof these headers.
+
+### address_header
+
+Default: `""`
+
+Environment variable: `ADDRESS_HEADER`
+
+Header for determining `event.clientAddress` behind proxies.
+
+The [RequestEvent](https://kit.svelte.dev/docs/types#additional-types-requestevent) object passed to hooks and endpoints includes an `event.clientAddress` property representing the client's IP address.
 
 ### xff_depth
 
-Default: `0`
+Default: `1`
 
-The count of trusted proxies before your server.
+The count of trusted proxies before your server, used in conjunction with [address_header](#address_header) `X-Forwarded-For` or the `Forwarded` header.
 
 ## :spider_web: WebSocket Server
 
@@ -151,60 +250,13 @@ export const handleWebsocket = {
 
 ## :desktop_computer: Environment variables
 
+Some server options can also be configured via environment variables.
+They are documented with those settings and take precedence over the settings in `svelte.config.js`
+
+If [envPrefix](#envPrefix) is set, only variables starting with the prefix are used.
+If an unexpected environment variable is found, an Error will be thrown.
+
 > Bun [automatically reads configuration](https://bun.sh/docs/runtime/env) from `.env.local`, `.env.development`, `.env.production` and `.env`
-
-### `PORT` and `HOST`
-
-By default, the server will accept connections on `0.0.0.0` using port 3000. These can be customized with the `PORT` and `HOST` environment variables:
-
-```shell
-HOST=127.0.0.1 PORT=4000 bun build/index.js
-```
-
-### `ORIGIN`, `PROTOCOL_HEADER` and `HOST_HEADER`
-
-[SvelteKit Dokumentation](https://kit.svelte.dev/docs/adapter-node#environment-variables-origin-protocolheader-hostheader-and-port-header)
-
-HTTP doesn't give SvelteKit a reliable way to know the URL that is currently being requested. The simplest way to tell SvelteKit where the app is being served is to set the `ORIGIN` environment variable:
-
-```shell
-ORIGIN=https://my.site bun build/index.js
-```
-
-With this, a request for the `/stuff` pathname will correctly resolve to `https://my.site/stuff`. Alternatively, you can specify headers that tell SvelteKit about the request protocol and host, from which it can construct the origin URL:
-
-```shell
-PROTOCOL_HEADER=x-forwarded-proto HOST_HEADER=x-forwarded-host bun build/index.js
-```
-
-> [`x-forwarded-proto`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto) and [`x-forwarded-host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) are de facto standard headers that forward the original protocol and host if you're using a reverse proxy (think load balancers and CDNs). You should only set these variables if your server is behind a trusted reverse proxy; otherwise, it'd be possible for clients to spoof these headers.
-
-### `ADDRESS_HEADER` and `XFF_DEPTH`
-
-[SvelteKit Dokumentation](https://kit.svelte.dev/docs/adapter-node#environment-variables-addressheader-and-xffdepth)
-
-The [RequestEvent](https://kit.svelte.dev/docs/types#additional-types-requestevent) object passed to hooks and endpoints includes an `event.clientAddress` property representing the client's IP address. If your server is behind one or more proxies (such as a load balancer), you can get an IP address from headers, so we need to specify an `ADDRESS_HEADER` to read the address from:
-
-```shell
-ADDRESS_HEADER=True-Client-IP bun build/index.js
-```
-
-> Headers can easily be spoofed. As with `PROTOCOL_HEADER` and `HOST_HEADER`, you should [know what you're doing](https://adam-p.ca/blog/2022/03/x-forwarded-for/) before setting these.
-> If the `ADDRESS_HEADER` is `X-Forwarded-For`, the header value will contain a comma-separated list of IP addresses. The `XFF_DEPTH` environment variable should specify how many trusted proxies sit in front of your server. E.g. if there are three trusted proxies, proxy 3 will forward the addresses of the original connection and the first two proxies:
-
-```
-<client address>, <proxy 1 address>, <proxy 2 address>
-```
-
-Some guides will tell you to read the left-most address, but this leaves you [vulnerable to spoofing](https://adam-p.ca/blog/2022/03/x-forwarded-for/):
-
-```
-<spoofed address>, <client address>, <proxy 1 address>, <proxy 2 address>
-```
-
-Instead, we read from the _right_, accounting for the number of trusted proxies. In this case, we would use `XFF_DEPTH=3`.
-
-> If you need to read the left-most address instead (and don't care about spoofing) — for example, to offer a geolocation service, where it's more important for the IP address to be _real_ than _trusted_, you can do so by inspecting the `x-forwarded-for` header within your app.
 
 ## License
 

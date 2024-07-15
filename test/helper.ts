@@ -1,12 +1,14 @@
-import { serve, spawn } from "bun";
-import type { Subprocess, TLSOptions, Server } from "bun";
+import { serve, spawn, spawnSync } from "bun";
+import type { Subprocess, TLSOptions, Server, BunFile } from "bun";
 import { mkdir, cp, rm } from "node:fs/promises";
+import { AdapterOptions } from "../index";
 
 export type ProxyOptions = {
   hostname?: string;
   port?: number;
   tls?: TLSOptions;
   proxy_map: Map<string, string>;
+  forwarded_header?: boolean;
 };
 const CWD = process.cwd();
 function newRandomId(): string {
@@ -17,14 +19,24 @@ function newRandomId(): string {
 
 export function getProxy(): {
   server: Server;
-  setup: (_: ProxyOptions) => Promise<void>;
+  setup: (options: ProxyOptions) => Promise<void>;
   teardown: () => Promise<void>;
 } {
   return {
     server: undefined,
-    async setup({ hostname = "localhost", port = 7000, tls = undefined, proxy_map }: ProxyOptions) {
+    async setup({
+      hostname = "localhost",
+      port = 7000,
+      tls = undefined,
+      forwarded_header = false,
+      proxy_map,
+    }: ProxyOptions) {
       if (this.server) {
         throw new Error("Server already running");
+      }
+      let host = hostname;
+      if (((!tls && port != 80) || (tls && port != 443)) && !host.endsWith(":" + port)) {
+        host += ":" + port;
       }
       const fetch_handler = async (request: Request) => {
         const requestUrl = new URL(request.url);
@@ -41,18 +53,21 @@ export function getProxy(): {
         if (!matched) {
           return new Response("Not Found", { status: 404 });
         }
-
-        if ((!tls && port != 80) || (tls && port != 443)) {
-          hostname += ":" + port;
-        }
         const proxyRequest = new Request(requestUrl, request);
-        proxyRequest.headers.set("X-Forwarded-Proto", tls ? "https" : "http");
-        proxyRequest.headers.set("X-Forwarded-Host", hostname);
-        //proxyRequest.headers.set("X-Forwarded-For", "8.8.8.8");
+        const requestAddress = this.server.requestIP(request).address;
+        if (forwarded_header) {
+          proxyRequest.headers.set(
+            "Forwarded",
+            `proto=${tls ? "https" : "http"};host=${/^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/.test(host) ? host : '"' + host + '"'};for=${/^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/.test(requestAddress) ? requestAddress : '"' + requestAddress + '"'}`,
+          );
+        } else {
+          proxyRequest.headers.set("X-Forwarded-Proto", tls ? "https" : "http");
+          proxyRequest.headers.set("X-Forwarded-Host", host);
+          proxyRequest.headers.set("X-Forwarded-For", requestAddress);
+        }
         proxyRequest.headers.set("Origin", this.server.url.origin);
         return fetch(proxyRequest);
       };
-
       this.server = serve({ fetch: fetch_handler, hostname, port, tls });
     },
     async teardown() {
@@ -65,55 +80,58 @@ export function getProxy(): {
 export function getTestProject(): {
   server: Subprocess<"ignore", "pipe", "inherit">;
   projectDir: string;
-  setup: (_?: {
-    hostname?: string;
-    port?: number;
-    protocol_header?: string;
-    host_header?: string;
-    xff_depth?: number;
-  }) => Promise<void>;
+  setup: (options?: AdapterOptions) => Promise<void>;
   teardown: () => Promise<void>;
 } {
   return {
     server: undefined,
     projectDir: undefined,
-    async setup({
-      hostname = "localhost",
-      port = 7000,
-      protocol_header = "X-Forwarded-Proto",
-      host_header = "X-Forwarded-Host",
-      xff_depth = 0,
-    } = {}) {
+    async setup(options = {}) {
       if (this.server) {
         throw new Error("Server already running");
       }
       this.projectDir = `${CWD}/test/project-${newRandomId()}`;
       await cp(`${CWD}/test/project`, this.projectDir, { recursive: true });
-      await spawn({
-        cmd: ["bun", "install"],
-        cwd: this.projectDir,
-        stdout: null,
-      }).exited;
-      await spawn({
+      const svelteConfig = Bun.file(this.projectDir + "/svelte.config.js");
+      if (options.tls) {
+        await Promise.all([
+          Bun.write(
+            Bun.file(this.projectDir + "/server.key"),
+            (options.tls as TLSOptions).key as BunFile,
+          ),
+          Bun.write(
+            Bun.file(this.projectDir + "/server.crt"),
+            (options.tls as TLSOptions).cert as BunFile,
+          ),
+        ]);
+        (options.tls as TLSOptions).key = "server.key";
+        (options.tls as TLSOptions).cert = "server.crt";
+      }
+      options.development = true;
+      await Bun.write(
+        Bun.file(this.projectDir + "/svelte.config.js"),
+        (await svelteConfig.text()).replace("__ADAPTER_OPTIONS", JSON.stringify(options)),
+      );
+      let { exitCode, stderr } = spawnSync({
         cmd: ["bun", "x", "--bun", "vite", "build"],
         cwd: this.projectDir,
         stdout: null,
-      }).exited;
+      });
+      if (exitCode !== 0) {
+        console.error(stderr.toString());
+        throw new Error("Test project build failed");
+      }
       this.server = spawn({
         cmd: ["bun", "./build/index.js"],
         cwd: this.projectDir,
-        env: {
-          HOST: hostname,
-          PORT: port.toString(),
-          HOST_HEADER: host_header,
-          PROTOCOL_HEADER: protocol_header,
-          XFF_DEPTH: xff_depth.toString(),
-          SERVERDEV: "1",
-        },
       });
       const decoder = new TextDecoder();
       for await (const chunk of this.server.stdout) {
-        if (RegExp(`^Listening on ${hostname}:${port}`).test(decoder.decode(chunk))) {
+        if (
+          RegExp(`^Listening on ${options.host ?? "0.0.0.0"}:${options.port ?? 3000}`).test(
+            decoder.decode(chunk),
+          )
+        ) {
           break;
         }
       }
@@ -142,7 +160,7 @@ export function getCerts(): {
       }
       this.tempDir = `${CWD}/test/certs-${newRandomId()}`;
       await mkdir(this.tempDir);
-      await spawn({
+      let result = spawnSync({
         cmd: [
           "openssl",
           "genrsa",
@@ -154,9 +172,13 @@ export function getCerts(): {
           "4096",
         ],
         cwd: this.tempDir,
-        stdout: null,
-      }).exited;
-      await spawn({
+        stdout: "ignore",
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr.toString());
+        throw new Error("RSA private key generation failed");
+      }
+      result = spawnSync({
         cmd: [
           "openssl",
           "rsa",
@@ -168,15 +190,23 @@ export function getCerts(): {
           "server.key",
         ],
         cwd: this.tempDir,
-        stdout: null,
-      }).exited;
+        stdout: "ignore",
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr.toString());
+        throw new Error("RSA private key generation failed");
+      }
       await rm(`${this.tempDir}/server.pass.key`);
-      await spawn({
+      result = spawnSync({
         cmd: ["openssl", "req", "-new", "-batch", "-key", "server.key", "-out", "server.csr"],
         cwd: this.tempDir,
-        stdout: null,
-      }).exited;
-      await spawn({
+        stdout: "ignore",
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr.toString());
+        throw new Error("Certificate request generation failed");
+      }
+      result = spawnSync({
         cmd: [
           "openssl",
           "x509",
@@ -192,8 +222,12 @@ export function getCerts(): {
           "server.crt",
         ],
         cwd: this.tempDir,
-        stdout: null,
-      }).exited;
+        stdout: "ignore",
+      });
+      if (result.exitCode !== 0) {
+        console.error(result.stderr.toString());
+        throw new Error("Certificate signing request failed");
+      }
       this.tls = {
         key: Bun.file(`${this.tempDir}/server.key`),
         cert: Bun.file(`${this.tempDir}/server.crt`),
